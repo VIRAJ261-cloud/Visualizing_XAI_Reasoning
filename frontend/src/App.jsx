@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const initialTrustMetrics = [
   { label: 'Self-consistency', description: 'Consistency across sampled response paths', weight: 25, value: 84 },
@@ -26,26 +27,117 @@ function App() {
     largeText: false
   });
 
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authNotice, setAuthNotice] = useState('');
+
   const toggleA11y = (modeKey) => {
     setA11yModes((prev) => ({ ...prev, [modeKey]: !prev[modeKey] }));
   };
 
-  const handleClearChat = () => {
-    setMessages([]);
+  const fetchChatHistory = async (userId) => {
+    if (!userId || !isSupabaseConfigured()) {
+      setMessages([]);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (!error && data) {
+        const formatted = data.map((item) => ({
+          id: item.id,
+          sender: item.sender,
+          text: item.text,
+          topic: item.topic || 'Trust analysis',
+          createdAt: item.created_at
+        }));
+        setMessages(formatted);
+      } else {
+        setMessages([]);
+      }
+    } catch (err) {
+      console.warn('Supabase fetch chat history note:', err.message);
+      setMessages([]);
+    }
   };
 
-  const handleDeleteMessage = (id) => {
+  const handleClearChat = async () => {
+    setMessages([]);
+    if (session?.user?.id && isSupabaseConfigured()) {
+      try {
+        await supabase.from('chat_messages').delete().eq('user_id', session.user.id);
+      } catch (err) {
+        console.warn('Supabase clear chat note:', err.message);
+      }
+    }
+  };
+
+  const handleDeleteMessage = async (id) => {
     setMessages((prev) => prev.filter((m) => m.id !== id));
+    if (session?.user?.id && isSupabaseConfigured()) {
+      try {
+        await supabase.from('chat_messages').delete().eq('id', id).eq('user_id', session.user.id);
+      } catch (err) {
+        console.warn('Supabase delete message note:', err.message);
+      }
+    }
   };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: ''
   });
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        const meta = session.user.user_metadata || {};
+        setFormData((prev) => ({
+          ...prev,
+          email: session.user.email || prev.email,
+          name: meta.full_name || meta.name || prev.name || session.user.email?.split('@')[0] || ''
+        }));
+        fetchChatHistory(session.user.id);
+        setView('chatbot');
+      }
+    }).catch((err) => {
+      console.warn('Supabase getSession note:', err.message);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      if (session?.user) {
+        const meta = session.user.user_metadata || {};
+        setFormData((prev) => ({
+          ...prev,
+          email: session.user.email || prev.email,
+          name: meta.full_name || meta.name || prev.name || session.user.email?.split('@')[0] || ''
+        }));
+        fetchChatHistory(session.user.id);
+        if (event === 'SIGNED_IN') {
+          setView('chatbot');
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setView('auth');
+        setMessages([]);
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   const topics = ['Trust analysis', 'Model summary', 'Explainability', 'Next actions'];
 
@@ -61,21 +153,94 @@ function App() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    alert(`${isLogin ? 'Login' : 'Registration'} submitted for ${formData.email}`);
+    setAuthError('');
+    setAuthNotice('');
+    setAuthLoading(true);
+
+    try {
+      if (isLogin) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password
+        });
+
+        if (error) {
+          if (!isSupabaseConfigured() || error.message?.toLowerCase().includes('fetch') || error.message?.toLowerCase().includes('url')) {
+            setAuthNotice(`Supabase Auth (Demo Mode): Operating with placeholder API keys. Standard fallback enabled.`);
+            setView('chatbot');
+          } else {
+            setAuthError(error.message || 'Login failed. Please check your credentials.');
+          }
+        } else if (data?.user) {
+          setAuthNotice('Successfully signed in via Supabase!');
+          setView('chatbot');
+        }
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.name
+            }
+          }
+        });
+
+        if (error) {
+          if (!isSupabaseConfigured() || error.message?.toLowerCase().includes('fetch') || error.message?.toLowerCase().includes('url')) {
+            setAuthNotice(`Supabase Sign Up (Demo Mode): Operating with placeholder API keys. Account created in demo view.`);
+            setView('chatbot');
+          } else {
+            setAuthError(error.message || 'Registration failed. Please try again.');
+          }
+        } else if (data?.user) {
+          if (data?.session) {
+            setAuthNotice('Account created and signed in successfully via Supabase!');
+            setView('chatbot');
+          } else {
+            setAuthNotice('Registration submitted! Please check your email to confirm registration.');
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Auth submission exception:', err);
+      setAuthNotice('Operating with placeholder credentials. Entering workspace.');
+      setView('chatbot');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
-  const handleSend = (event) => {
+  const handleSignOut = async () => {
+    setAuthLoading(true);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('Sign out warning:', err);
+    } finally {
+      setSession(null);
+      setView('auth');
+      setAuthLoading(false);
+      setShowProfileModal(false);
+    }
+  };
+
+  const handleSend = async (event) => {
     event.preventDefault();
     if (!draft.trim()) return;
 
     const userText = draft.trim();
-    setMessages((prev) => [
-      ...prev,
-      { id: prev.length + 1, sender: 'user', text: userText },
-      { id: prev.length + 2, sender: 'bot', text: `CLARIO-1 suggests a calm, secure next step for: “${userText}”.` }
-    ]);
+    const botText = `CLARIO-1 suggests a calm, secure next step for: “${userText}”.`;
+
+    const userTempId = 'temp-' + Date.now();
+    const botTempId = 'temp-' + (Date.now() + 1);
+
+    const userMsg = { id: userTempId, sender: 'user', text: userText, topic: activeTopic };
+    const botMsg = { id: botTempId, sender: 'bot', text: botText, topic: activeTopic };
+
+    setMessages((prev) => [...prev, userMsg, botMsg]);
     setTrustMetrics((prev) =>
       prev.map((metric) => ({
         ...metric,
@@ -83,6 +248,30 @@ function App() {
       }))
     );
     setDraft('');
+
+    if (session?.user?.id && isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .insert([
+            { user_id: session.user.id, sender: 'user', text: userText, topic: activeTopic },
+            { user_id: session.user.id, sender: 'bot', text: botText, topic: activeTopic }
+          ])
+          .select();
+
+        if (!error && data && data.length === 2) {
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.id === userTempId) return { ...m, id: data[0].id };
+              if (m.id === botTempId) return { ...m, id: data[1].id };
+              return m;
+            })
+          );
+        }
+      } catch (err) {
+        console.warn('Supabase insert message note:', err.message);
+      }
+    }
   };
 
   const [reliabilityThreshold, setReliabilityThreshold] = useState(75);
@@ -280,14 +469,33 @@ function App() {
 
       <div className="auth-card">
         <div className="brand-block">
+          <div className="pill-row">
+            <span className={`supabase-status-badge ${isSupabaseConfigured() ? 'configured' : 'placeholder'}`}>
+              ⚡ {isSupabaseConfigured() ? 'Supabase Auth Connected' : 'Supabase (Placeholder Key Active)'}
+            </span>
+          </div>
           <p className="eyebrow">AI powered insight workspace</p>
           <h1>CLARIO-1</h1>
           <p className="subtitle">
             {isLogin
-              ? 'Welcome back. Sign in to continue your analysis with calm confidence.'
-              : 'Create your account and begin exploring CLARIO-1 in a secure, fluid workspace.'}
+              ? 'Welcome back. Sign in with Supabase to continue your analysis.'
+              : 'Create your account with Supabase and begin exploring CLARIO-1 in a secure workspace.'}
           </p>
         </div>
+
+        {authError && (
+          <div className="auth-alert-box error">
+            <span>⚠️</span>
+            <div>{authError}</div>
+          </div>
+        )}
+
+        {authNotice && (
+          <div className="auth-alert-box notice">
+            <span>ℹ️</span>
+            <div>{authNotice}</div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="auth-form">
           {!isLogin && (
@@ -328,14 +536,14 @@ function App() {
             />
           </label>
 
-          <button type="submit" className="primary-btn">
-            {isLogin ? 'Login' : 'Create account'}
+          <button type="submit" className="primary-btn" disabled={authLoading}>
+            {authLoading ? 'Connecting to Supabase...' : isLogin ? 'Login with Supabase' : 'Create account'}
           </button>
         </form>
 
         <div className="switch-row">
           <span>{isLogin ? 'New here?' : 'Already have an account?'}</span>
-          <button type="button" className="link-btn" onClick={() => setIsLogin((prev) => !prev)}>
+          <button type="button" className="link-btn" onClick={() => { setIsLogin((prev) => !prev); setAuthError(''); setAuthNotice(''); }}>
             {isLogin ? 'Create account' : 'Login'}
           </button>
         </div>
@@ -348,9 +556,9 @@ function App() {
         </div>
 
         <div className="trust-footer">
+          <span>Supabase Auth</span>
           <span>Privacy-alerts</span>
           <span>Flexible access</span>
-          <span>Human-centered AI</span>
         </div>
       </div>
     </div>
@@ -633,12 +841,10 @@ function App() {
               <button
                 type="button"
                 className="secondary-btn"
-                onClick={() => {
-                  setShowProfileModal(false);
-                  setView('auth');
-                }}
+                onClick={handleSignOut}
+                disabled={authLoading}
               >
-                Log out
+                {authLoading ? 'Signing out...' : 'Log out'}
               </button>
               <button
                 type="button"
