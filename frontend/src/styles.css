@@ -3,8 +3,8 @@
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  background: linear-gradient(135deg, #07111f 0%, #0f2440 100%);
-  color: #f4f7fb;
+  color: #f4f8ff;
+  background: linear-gradient(135deg, #07131f 0%, #0f2941 40%, #173f52 100%);
 }
 
 * {
@@ -14,6 +14,7 @@
 body {
   margin: 0;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 button,
@@ -26,34 +27,102 @@ input {
   display: grid;
   place-items: center;
   padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(10px);
+  opacity: 0.8;
+  animation: drift 10s ease-in-out infinite alternate;
+}
+
+.orb-one {
+  width: 280px;
+  height: 280px;
+  top: -80px;
+  left: -70px;
+  background: radial-gradient(circle at 30% 30%, #7cd8ff, #2e7dff 55%, transparent 80%);
+}
+
+.orb-two {
+  width: 360px;
+  height: 360px;
+  right: -100px;
+  bottom: -120px;
+  background: radial-gradient(circle at 40% 40%, #7fffd4, #2f9e7d 60%, transparent 85%);
+  animation-duration: 12s;
+}
+
+.orb-three {
+  width: 220px;
+  height: 220px;
+  top: 40%;
+  right: 20%;
+  background: radial-gradient(circle at 50% 50%, #b9d7ff, #4c6ef5 50%, transparent 82%);
+  animation-duration: 8s;
 }
 
 .auth-card {
-  width: min(100%, 440px);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 24px;
+  width: min(100%, 460px);
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 28px;
   padding: 32px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 24px 80px rgba(3, 13, 24, 0.35);
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.trust-pill {
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #eff8ff;
+  background: rgba(76, 110, 245, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.trust-pill.soft {
+  background: rgba(127, 255, 212, 0.18);
 }
 
 .eyebrow {
   margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.24em;
-  font-size: 0.72rem;
-  color: #84c8ff;
+  font-size: 0.74rem;
+  color: #a5d7ff;
 }
 
 h1 {
   margin: 0 0 8px;
-  font-size: 2rem;
+  font-size: 2.15rem;
+  letter-spacing: -0.03em;
 }
 
 .subtitle {
   margin: 0 0 24px;
-  color: #dbeafe;
+  color: #dfefff;
 }
 
 .auth-form {
@@ -67,20 +136,22 @@ label {
   flex-direction: column;
   gap: 6px;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.96rem;
 }
 
 input {
   padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  background: rgba(7, 17, 31, 0.75);
+  border-radius: 14px;
+  background: rgba(7, 17, 31, 0.7);
   color: white;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 input:focus {
-  outline: 2px solid #84c8ff;
-  border-color: transparent;
+  outline: none;
+  border-color: #7cd8ff;
+  box-shadow: 0 0 0 3px rgba(124, 216, 255, 0.22);
 }
 
 .primary-btn {
@@ -88,10 +159,17 @@ input:focus {
   padding: 12px 14px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(90deg, #4f8cff 0%, #7c4dff 100%);
+  background: linear-gradient(90deg, #43a1ff 0%, #2bbf9f 100%);
   color: white;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 24px rgba(43, 191, 159, 0.2);
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(43, 191, 159, 0.3);
 }
 
 .switch-row {
@@ -99,15 +177,39 @@ input:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #dbeafe;
+  color: #dfefff;
   font-size: 0.95rem;
 }
 
 .link-btn {
   border: none;
   background: transparent;
-  color: #84c8ff;
+  color: #7cd8ff;
   font-weight: 700;
   cursor: pointer;
   padding: 0;
+}
+
+.trust-footer {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #badaf6;
+  font-size: 0.82rem;
+}
+
+.trust-footer span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(20px, -20px, 0) scale(1.08);
+  }
 }

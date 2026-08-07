@@ -20,14 +20,24 @@ function App() {
 
   return (
     <div className="page-shell">
+      <div className="background">
+        <div className="orb orb-one" />
+        <div className="orb orb-two" />
+        <div className="orb orb-three" />
+      </div>
+
       <div className="auth-card">
         <div className="brand-block">
+          <div className="pill-row">
+            <span className="trust-pill">Trusted by teams</span>
+            <span className="trust-pill soft">Secure by design</span>
+          </div>
           <p className="eyebrow">AI powered insight workspace</p>
           <h1>CLARIO-1</h1>
           <p className="subtitle">
             {isLogin
-              ? 'Welcome back. Sign in to continue your analysis.'
-              : 'Create your account and start exploring CLARIO-1.'}
+              ? 'Welcome back. Sign in to continue your analysis with calm confidence.'
+              : 'Create your account and begin exploring CLARIO-1 in a secure, fluid workspace.'}
           </p>
         </div>
 
@@ -80,6 +90,12 @@ function App() {
           <button type="button" className="link-btn" onClick={() => setIsLogin((prev) => !prev)}>
             {isLogin ? 'Create account' : 'Login'}
           </button>
+        </div>
+
+        <div className="trust-footer">
+          <span>Privacy-first</span>
+          <span>Flexible access</span>
+          <span>Human-centered AI</span>
         </div>
       </div>
     </div>
