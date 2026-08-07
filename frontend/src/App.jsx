@@ -1,5 +1,14 @@
 import { useState } from 'react';
 
+const initialTrustMetrics = [
+  { label: 'Signal', weight: 30, value: 78 },
+  { label: 'Self-consistency', weight: 25, value: 84 },
+  { label: 'Semantic agreement', weight: 25, value: 71 },
+  { label: 'Source quality', weight: 20, value: 65 },
+  { label: 'Retrieval completeness', weight: 15, value: 88 },
+  { label: 'External verification', weight: 10, value: 59 }
+];
+
 function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [view, setView] = useState('auth');
@@ -9,6 +18,7 @@ function App() {
     { id: 1, sender: 'bot', text: 'Welcome to CLARIO-1. I can help summarize trust, explain reasoning, or review your latest insights.' },
     { id: 2, sender: 'user', text: 'Show me the current trust status.' }
   ]);
+  const [trustMetrics, setTrustMetrics] = useState(initialTrustMetrics);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,8 +47,39 @@ function App() {
       { id: prev.length + 1, sender: 'user', text: userText },
       { id: prev.length + 2, sender: 'bot', text: `CLARIO-1 suggests a calm, secure next step for: “${userText}”.` }
     ]);
+    setTrustMetrics((prev) =>
+      prev.map((metric) => ({
+        ...metric,
+        value: Math.max(50, Math.min(100, metric.value + (Math.random() * 16 - 8)))
+      }))
+    );
     setDraft('');
   };
+
+  const renderTrustPanel = () => (
+    <aside className="trust-panel">
+      <div className="trust-panel-header">
+        <div>
+          <p className="eyebrow">Trust score</p>
+          <h4>Reliability breakdown across multiple signals</h4>
+        </div>
+        <span className="trust-badge">Separate dimensions</span>
+      </div>
+
+      {trustMetrics.map(({ label, weight, value }) => (
+        <div key={label} className="trust-metric">
+          <div className="metric-meta">
+            <span className="metric-label">{label}</span>
+            <span className="metric-value">{Math.round(value)}%</span>
+          </div>
+          <div className="metric-scale">
+            <div className="metric-fill" style={{ width: `${value}%` }} />
+          </div>
+          <div className="metric-weight">Weight: {weight}%</div>
+        </div>
+      ))}
+    </aside>
+  );
 
   const renderAuthView = () => (
     <div className="page-shell">
@@ -140,26 +181,40 @@ function App() {
 
       <div className="chatbot-card">
         <aside className="sidebar">
-          <div className="brand-block compact">
-            <div className="logo-mark">C</div>
-            <div>
-              <h2>CLARIO-1</h2>
-              <p>Insight assistant</p>
+          <div className="sidebar-top">
+            <div className="brand-block compact">
+              <div className="logo-mark">C</div>
+              <div>
+                <h2>CLARIO-1</h2>
+                <p>Insight assistant</p>
+              </div>
+            </div>
+
+            <div className="sidebar-section">
+              <p className="sidebar-label">Recent topics</p>
+              {topics.map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  className={`topic-item ${activeTopic === topic ? 'active' : ''}`}
+                  onClick={() => setActiveTopic(topic)}
+                >
+                  {topic}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="sidebar-section">
-            <p className="sidebar-label">Recent topics</p>
-            {topics.map((topic) => (
-              <button
-                key={topic}
-                type="button"
-                className={`topic-item ${activeTopic === topic ? 'active' : ''}`}
-                onClick={() => setActiveTopic(topic)}
-              >
-                {topic}
-              </button>
-            ))}
+          <div className="sidebar-profile">
+            <div className="profile-card">
+              <div className="avatar">AC</div>
+              <div>
+                <p className="profile-name">Alicia Chen</p>
+                <button type="button" className="link-btn small" onClick={() => setView('auth')}>
+                  Log out
+                </button>
+              </div>
+            </div>
           </div>
         </aside>
 
@@ -168,15 +223,6 @@ function App() {
             <div>
               <p className="eyebrow">Live conversation</p>
               <h3>{activeTopic}</h3>
-            </div>
-            <div className="profile-row">
-              <div className="avatar">AC</div>
-              <div>
-                <p className="profile-name">Alicia Chen</p>
-                <button type="button" className="link-btn small" onClick={() => setView('auth')}>
-                  Log out
-                </button>
-              </div>
             </div>
           </header>
 
@@ -200,6 +246,10 @@ function App() {
             </button>
           </form>
         </main>
+
+        <aside className="trust-column">
+          {renderTrustPanel()}
+        </aside>
       </div>
     </div>
   );

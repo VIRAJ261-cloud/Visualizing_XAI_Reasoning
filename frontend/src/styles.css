@@ -224,10 +224,11 @@ input:focus {
 .chatbot-card {
   position: relative;
   z-index: 1;
-  width: min(100%, 1080px);
+  width: min(100%, 1280px);
   min-height: 720px;
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(420px, 1fr) 340px;
+  gap: 1px;
   border-radius: 30px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.14);
@@ -238,8 +239,46 @@ input:focus {
 
 .sidebar {
   padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   background: rgba(8, 20, 35, 0.42);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sidebar-top {
+  display: grid;
+  gap: 24px;
+}
+
+.sidebar-profile {
+  margin-top: 24px;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-card .avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 1rem;
+}
+
+.profile-card .profile-name {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+
+.profile-card .link-btn.small {
+  padding: 0;
 }
 
 .brand-block.compact {
@@ -305,6 +344,7 @@ input:focus {
   flex-direction: column;
   padding: 20px;
   gap: 16px;
+  min-width: 0;
 }
 
 .chat-header {
@@ -350,6 +390,88 @@ input:focus {
   background: rgba(5, 16, 28, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: auto;
+}
+
+.trust-panel {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+  min-height: 100%;
+}
+
+.trust-column {
+  padding: 20px;
+  background: rgba(7, 17, 31, 0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: stretch;
+}
+
+.trust-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.trust-panel-header h4 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  color: #e7f1ff;
+}
+
+.trust-badge {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  background: rgba(67, 161, 255, 0.16);
+  color: #c7e8ff;
+  font-weight: 700;
+}
+
+.trust-metric {
+  display: grid;
+  gap: 8px;
+}
+
+.metric-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.metric-label {
+  font-weight: 700;
+  color: #f8fcff;
+}
+
+.metric-value {
+  color: #c7e8ff;
+  font-weight: 700;
+}
+
+.metric-scale {
+  height: 10px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.metric-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #43a1ff, #2bbf9f);
+}
+
+.metric-weight {
+  color: #b7cff8;
+  font-size: 0.82rem;
 }
 
 .bubble {
