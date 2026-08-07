@@ -2,11 +2,20 @@ import { useState } from 'react';
 
 function App() {
   const [isLogin, setIsLogin] = useState(true);
+  const [view, setView] = useState('auth');
+  const [activeTopic, setActiveTopic] = useState('Trust analysis');
+  const [draft, setDraft] = useState('');
+  const [messages, setMessages] = useState([
+    { id: 1, sender: 'bot', text: 'Welcome to CLARIO-1. I can help summarize trust, explain reasoning, or review your latest insights.' },
+    { id: 2, sender: 'user', text: 'Show me the current trust status.' }
+  ]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: ''
   });
+
+  const topics = ['Trust analysis', 'Model summary', 'Explainability', 'Next actions'];
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -18,7 +27,20 @@ function App() {
     alert(`${isLogin ? 'Login' : 'Registration'} submitted for ${formData.email}`);
   };
 
-  return (
+  const handleSend = (event) => {
+    event.preventDefault();
+    if (!draft.trim()) return;
+
+    const userText = draft.trim();
+    setMessages((prev) => [
+      ...prev,
+      { id: prev.length + 1, sender: 'user', text: userText },
+      { id: prev.length + 2, sender: 'bot', text: `CLARIO-1 suggests a calm, secure next step for: “${userText}”.` }
+    ]);
+    setDraft('');
+  };
+
+  const renderAuthView = () => (
     <div className="page-shell">
       <div className="background">
         <div className="orb orb-one" />
@@ -92,6 +114,13 @@ function App() {
           </button>
         </div>
 
+        <div className="switch-row top-gap">
+          <span>Need a guided workspace?</span>
+          <button type="button" className="link-btn" onClick={() => setView('chatbot')}>
+            Open chatbot
+          </button>
+        </div>
+
         <div className="trust-footer">
           <span>Privacy-first</span>
           <span>Flexible access</span>
@@ -100,6 +129,82 @@ function App() {
       </div>
     </div>
   );
+
+  const renderChatbotView = () => (
+    <div className="page-shell chatbot-shell">
+      <div className="background">
+        <div className="orb orb-one" />
+        <div className="orb orb-two" />
+        <div className="orb orb-three" />
+      </div>
+
+      <div className="chatbot-card">
+        <aside className="sidebar">
+          <div className="brand-block compact">
+            <div className="logo-mark">C</div>
+            <div>
+              <h2>CLARIO-1</h2>
+              <p>Insight assistant</p>
+            </div>
+          </div>
+
+          <div className="sidebar-section">
+            <p className="sidebar-label">Recent topics</p>
+            {topics.map((topic) => (
+              <button
+                key={topic}
+                type="button"
+                className={`topic-item ${activeTopic === topic ? 'active' : ''}`}
+                onClick={() => setActiveTopic(topic)}
+              >
+                {topic}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <main className="chat-main">
+          <header className="chat-header">
+            <div>
+              <p className="eyebrow">Live conversation</p>
+              <h3>{activeTopic}</h3>
+            </div>
+            <div className="profile-row">
+              <div className="avatar">AC</div>
+              <div>
+                <p className="profile-name">Alicia Chen</p>
+                <button type="button" className="link-btn small" onClick={() => setView('auth')}>
+                  Log out
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <section className="chat-window">
+            {messages.map((message) => (
+              <div key={message.id} className={`bubble ${message.sender}`}>
+                <p>{message.text}</p>
+              </div>
+            ))}
+          </section>
+
+          <form className="composer" onSubmit={handleSend}>
+            <input
+              type="text"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Ask about trust, reasoning, or your next insight..."
+            />
+            <button type="submit" className="primary-btn compact-btn">
+              Send
+            </button>
+          </form>
+        </main>
+      </div>
+    </div>
+  );
+
+  return view === 'chatbot' ? renderChatbotView() : renderAuthView();
 }
 
 export default App;
