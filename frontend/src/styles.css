@@ -1243,10 +1243,8 @@ input:focus {
 .trust-upper-division {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  gap: 10px;
+  flex-shrink: 0;
   padding-right: 2px;
 }
 
@@ -1733,10 +1731,21 @@ input:focus {
   overflow: hidden;
 }
 
+.trust-lower-division {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .adv-controls-container {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* User Custom Reliability Threshold Slider */
@@ -1748,6 +1757,7 @@ input:focus {
   border-radius: 12px;
   background: var(--inner-card-bg);
   border: 1px solid var(--panel-border);
+  flex-shrink: 0;
 }
 
 .threshold-header {
@@ -1798,10 +1808,13 @@ input:focus {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 0 2px;
+  flex-shrink: 0;
 }
 
 .trust-lower-division .trust-metrics-scroll {
-  max-height: 220px;
+  flex: 1;
+  min-height: 0;
+  max-height: 450px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
