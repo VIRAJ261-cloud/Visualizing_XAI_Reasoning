@@ -451,6 +451,7 @@ function App() {
   const [draft, setDraft] = useState('');
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+  const [isChatHistoryCollapsed, setIsChatHistoryCollapsed] = useState(false);
   const [showTour, setShowTour] = useState(() => {
     return localStorage.getItem('clario_has_seen_tour') !== 'true';
   });
@@ -1447,7 +1448,16 @@ function App() {
 
               <div className="sidebar-section">
                 <div className="sidebar-header-row">
-                  <p className="sidebar-label">Chat History</p>
+                  <button
+                    type="button"
+                    className="history-collapse-toggle-btn"
+                    onClick={() => setIsChatHistoryCollapsed((prev) => !prev)}
+                    title={isChatHistoryCollapsed ? "Expand Chat History" : "Collapse Chat History"}
+                  >
+                    <span className={`toggle-chevron ${isChatHistoryCollapsed ? 'collapsed' : ''}`}>▼</span>
+                    <span className="sidebar-label">Chat History</span>
+                  </button>
+
                   <button
                     type="button"
                     className="new-chat-btn"
@@ -1461,53 +1471,55 @@ function App() {
                   </button>
                 </div>
 
-                <div className="topics-list conversations-list">
-                  {conversations.length === 0 ? (
-                    <div className="empty-conv-placeholder">
-                      <p>No recent chats</p>
-                      <button
-                        type="button"
-                        className="start-first-chat-btn"
-                        onClick={() => setActiveConvId(null)}
-                      >
-                        + Start new chat
-                      </button>
-                    </div>
-                  ) : (
-                    conversations.map((conv) => {
-                      const isActive = activeConvId === conv.id;
-                      const msgCount = conv.messages?.length || 0;
-                      return (
-                        <div
-                          key={conv.id}
-                          className={`topic-item conversation-item ${isActive ? 'active' : ''}`}
-                          onClick={() => {
-                            setActiveConvId(conv.id);
-                            setMobileTab('chat');
-                          }}
+                {!isChatHistoryCollapsed && (
+                  <div className="topics-list conversations-list">
+                    {conversations.length === 0 ? (
+                      <div className="empty-conv-placeholder">
+                        <p>No recent chats</p>
+                        <button
+                          type="button"
+                          className="start-first-chat-btn"
+                          onClick={() => setActiveConvId(null)}
                         >
-                          <div className="conv-item-content">
-                            <div className="conv-item-title-row">
-                              <span className="conv-title" title={conv.title}>{conv.title}</span>
-                            </div>
-                            <div className="conv-item-meta">
-                              <span className="conv-category-badge">{conv.category || 'General'}</span>
-                              <span className="conv-msg-count">{msgCount} {msgCount === 1 ? 'msg' : 'msgs'}</span>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            className="conv-delete-btn"
-                            onClick={(e) => requestDeleteConversation(conv.id, e)}
-                            title="Delete conversation"
+                          + Start new chat
+                        </button>
+                      </div>
+                    ) : (
+                      conversations.map((conv) => {
+                        const isActive = activeConvId === conv.id;
+                        const msgCount = conv.messages?.length || 0;
+                        return (
+                          <div
+                            key={conv.id}
+                            className={`topic-item conversation-item ${isActive ? 'active' : ''}`}
+                            onClick={() => {
+                              setActiveConvId(conv.id);
+                              setMobileTab('chat');
+                            }}
                           >
-                            🗑️
-                          </button>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                            <div className="conv-item-content">
+                              <div className="conv-item-title-row">
+                                <span className="conv-title" title={conv.title}>{conv.title}</span>
+                              </div>
+                              <div className="conv-item-meta">
+                                <span className="conv-category-badge">{conv.category || 'General'}</span>
+                                <span className="conv-msg-count">{msgCount} {msgCount === 1 ? 'msg' : 'msgs'}</span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="conv-delete-btn"
+                              onClick={(e) => requestDeleteConversation(conv.id, e)}
+                              title="Delete conversation"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
