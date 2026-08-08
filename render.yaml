@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: clario-1-backend
+    env: python
+    region: oregon
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: AI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        value: https://vdunwgvunhffpdotqjlt.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

@@ -442,6 +442,8 @@ const TOUR_STEPS = [
   }
 ];
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://clario-1backend.onrender.com';
+
 function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [view, setView] = useState('auth');
@@ -893,7 +895,7 @@ function App() {
     let isSubscribed = true;
     const updateActiveMetrics = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/analysis/metrics', {
+        const res = await fetch(`${API_BASE_URL}/api/analysis/metrics`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -946,7 +948,7 @@ function App() {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000);
-      const backendRes = await fetch('http://localhost:8000/api/chat/message', {
+      const backendRes = await fetch(`${API_BASE_URL}/api/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -972,7 +974,7 @@ function App() {
     }
 
     try {
-      const metricRes = await fetch('http://localhost:8000/api/analysis/metrics', {
+      const metricRes = await fetch(`${API_BASE_URL}/api/analysis/metrics`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
