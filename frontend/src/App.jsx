@@ -377,9 +377,17 @@ const defaultConversations = [
 
 const TOUR_STEPS = [
   {
+    step: 0,
+    title: "🚀 Welcome to Clario-1 Onboarding",
+    subtitle: "Interactive XAI Reasoning & Trust Platform",
+    content: "Welcome! Let's take a quick 1-minute guided tour to explore how Clario-1 visualizes AI reliability, Grok LLM reasoning, 3D Reasoning Crystal telemetry, and real-time privacy protection.",
+    targetId: null,
+    featureTag: "ONBOARDING WELCOME"
+  },
+  {
     step: 1,
-    title: "🤖 Welcome to Clario-1 AI",
-    subtitle: "Conversational Intelligence Engine",
+    title: "🤖 Conversational Intelligence Engine",
+    subtitle: "Dynamic Grok LLM Assistance",
     content: "Clario is powered by dynamic Grok LLM intelligence, answering any sports, general knowledge, math, science, or coding questions with rich Markdown formatting.",
     targetId: "chat-main-window",
     featureTag: "SPOTLIGHT: CONVERSATIONAL ENGINE"
@@ -423,6 +431,14 @@ const TOUR_STEPS = [
     content: "Collapse the left or right panels to maximize your chat space. Re-open anytime via the personalized User Profile Indication card or Basic Trust Score badge.",
     targetId: "workspace-top-bar",
     featureTag: "SPOTLIGHT: PANEL CONTROLS"
+  },
+  {
+    step: 7,
+    title: "🎉 Onboarding Complete!",
+    subtitle: "You're All Set to Experience Clario-1",
+    content: "You are now equipped with full command over AI trust telemetry and reasoning analytics. You can replay this Onboarding Guide anytime from the top bar or your user profile.",
+    targetId: null,
+    featureTag: "ONBOARDING COMPLETE"
   }
 ];
 
@@ -461,6 +477,29 @@ function App() {
     setShowTour(false);
     localStorage.setItem('clario_has_seen_tour', 'true');
   };
+
+  useEffect(() => {
+    if (!showTour) return;
+
+    // Dynamically uncollapse required panels for active step
+    if (tourStep === 2 || tourStep === 3 || tourStep === 4) {
+      setIsRightCollapsed(false);
+    } else if (tourStep === 6) {
+      setIsLeftCollapsed(false);
+    }
+
+    const currentTargetId = TOUR_STEPS[tourStep]?.targetId;
+    const timer = setTimeout(() => {
+      if (currentTargetId) {
+        const el = document.getElementById(currentTargetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }, 180);
+
+    return () => clearTimeout(timer);
+  }, [tourStep, showTour]);
   
   const [conversations, setConversations] = useState(() => {
     try {
@@ -1094,7 +1133,7 @@ function App() {
             </div>
           </div>
 
-          <div className={`crystal-container-card ${crystalState} ${isThinking ? 'scanning' : ''} ${showTour && tourStep === 1 ? 'limelight-spotlight-active' : ''}`} id="reasoning-crystal-card">
+          <div className={`crystal-container-card ${crystalState} ${isThinking ? 'scanning' : ''} ${showTour && tourStep === 2 ? 'limelight-spotlight-active' : ''}`} id="reasoning-crystal-card">
             <div className="crystal-beacon-header">
               <div className="realtime-beacon-badge">
                 <span className="beacon-dot" />
@@ -1161,7 +1200,7 @@ function App() {
       {/* Lower Division: Target Reliability Benchmark & ADV Metrics */}
       <div className="trust-lower-division">
         {/* Target Reliability Benchmark Slider (Permanently Visible) */}
-        <div className={`threshold-control-card ${showTour && tourStep === 2 ? 'limelight-spotlight-active' : ''}`} id="benchmark-slider-card">
+        <div className={`threshold-control-card ${showTour && tourStep === 3 ? 'limelight-spotlight-active' : ''}`} id="benchmark-slider-card">
           <div className="threshold-header">
             <span className="threshold-title">Target Reliability Benchmark</span>
             <span className="threshold-val">{reliabilityThreshold}%</span>
@@ -1184,7 +1223,7 @@ function App() {
 
         <button
           type="button"
-          className={`adv-toggle-btn ${showTour && tourStep === 3 ? 'limelight-spotlight-active' : ''}`}
+          className={`adv-toggle-btn ${showTour && tourStep === 4 ? 'limelight-spotlight-active' : ''}`}
           id="adv-metrics-toggle"
           onClick={() => setShowAdv((prev) => !prev)}
         >
@@ -1534,7 +1573,7 @@ function App() {
           </aside>
 
           <main className={`chat-main ${mobileTab !== 'chat' ? 'mobile-hidden' : ''}`}>
-            <div className={`chat-top-actions ${showTour && tourStep === 5 ? 'limelight-spotlight-active' : ''}`} id="workspace-top-bar">
+            <div className={`chat-top-actions ${showTour && tourStep === 6 ? 'limelight-spotlight-active' : ''}`} id="workspace-top-bar">
               <div className="top-actions-left">
                 {isLeftCollapsed && (
                   <button
@@ -1562,10 +1601,10 @@ function App() {
                   type="button"
                   className="feature-guide-btn"
                   onClick={startTour}
-                  title="Open Guided Feature Tour"
+                  title="Open Onboarding Guide"
                 >
-                  <span className="guide-icon">📖</span>
-                  <span className="guide-text">Feature Guide</span>
+                  <span className="guide-icon">🚀</span>
+                  <span className="guide-text">Onboarding Guide</span>
                 </button>
 
                 {isRightCollapsed && (
@@ -1584,7 +1623,7 @@ function App() {
               </div>
             </div>
 
-            <section className={`chat-window ${!messages.some((m) => m.sender === 'user') ? 'centered-hero' : ''} ${showTour && tourStep === 0 ? 'limelight-spotlight-active' : ''}`} id="chat-main-window">
+            <section className={`chat-window ${!messages.some((m) => m.sender === 'user') ? 'centered-hero' : ''} ${showTour && tourStep === 1 ? 'limelight-spotlight-active' : ''}`} id="chat-main-window">
               {!messages.some((m) => m.sender === 'user') ? (
                 <div className="chat-tagline-hero">
                   <span className="tagline-badge-hero">CLARIO-1</span>
@@ -1669,7 +1708,7 @@ function App() {
             {(() => {
               const sensitiveNotice = checkSensitiveData(draft);
               return (
-                <div className={`composer-wrapper ${showTour && tourStep === 4 ? 'limelight-spotlight-active' : ''}`} id="privacy-composer-box">
+                <div className={`composer-wrapper ${showTour && tourStep === 5 ? 'limelight-spotlight-active' : ''}`} id="privacy-composer-box">
                   <form className="composer" onSubmit={handleSend}>
                     <input
                       type="text"
@@ -2025,6 +2064,7 @@ function App() {
       {showTour && (
         <div className="modal-backdrop tour-backdrop" onClick={finishTour}>
           <div className={`tour-card step-${tourStep}`} onClick={(e) => e.stopPropagation()}>
+            <div className="spotlight-pointer-arrow" />
             <div className="tour-badge-row">
               <div className="tour-step-tags">
                 <span className="tour-step-badge">Step {tourStep + 1} of {TOUR_STEPS.length}</span>
@@ -2036,12 +2076,14 @@ function App() {
             <div className="tour-body">
               <div className="tour-icon-wrap">
                 <span className="tour-big-icon">
-                  {tourStep === 0 && "🤖"}
-                  {tourStep === 1 && "🔮"}
-                  {tourStep === 2 && "🎯"}
-                  {tourStep === 3 && "📊"}
-                  {tourStep === 4 && "🛡️"}
-                  {tourStep === 5 && "📐"}
+                  {tourStep === 0 && "🚀"}
+                  {tourStep === 1 && "🤖"}
+                  {tourStep === 2 && "🔮"}
+                  {tourStep === 3 && "🎯"}
+                  {tourStep === 4 && "📊"}
+                  {tourStep === 5 && "🛡️"}
+                  {tourStep === 6 && "📐"}
+                  {tourStep === 7 && "🎉"}
                 </span>
               </div>
               <div className="tour-text-content">
@@ -2072,7 +2114,7 @@ function App() {
                 className="primary-btn compact-btn"
                 onClick={nextTourStep}
               >
-                {tourStep === TOUR_STEPS.length - 1 ? 'Finish & Explore 🚀' : 'Next Step ▶'}
+                {tourStep === 0 ? 'Begin Onboarding Tour ▶' : tourStep === TOUR_STEPS.length - 1 ? 'Start Analyzing Now 🚀' : 'Next Step ▶'}
               </button>
             </div>
           </div>
