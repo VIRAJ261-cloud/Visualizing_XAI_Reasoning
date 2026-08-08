@@ -25,6 +25,7 @@ def call_grok_llm_api(
 ) -> str:
     """
     Calls Groq / Grok LLM API to get real, unhardcoded, dynamic chatbot responses.
+    """
     api_key = os.environ.get("AI_API_KEY", "").strip()
     if not api_key:
         env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
