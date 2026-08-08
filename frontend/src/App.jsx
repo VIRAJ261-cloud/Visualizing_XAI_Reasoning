@@ -119,6 +119,46 @@ const renderFormattedMarkdown = (content) => {
   });
 };
 
+const checkSensitiveData = (text) => {
+  if (!text || !text.trim()) return null;
+  const raw = text.trim();
+  const lower = raw.toLowerCase();
+
+  // 1. Realtime check for digit sequences (e.g. Aadhaar, Phone, Card, SSN numbers)
+  const digitCount = (raw.match(/\d/g) || []).length;
+  if (digitCount >= 4) {
+    if (/\b\d{4}\s?\d{4}\s?\d{4}\b/.test(raw) || digitCount >= 12) {
+      return '⚡ Realtime Privacy Guard: Personal ID / Aadhaar number pattern detected. Data remains 100% secure & local.';
+    }
+    if (/\b(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/.test(raw) || digitCount >= 10) {
+      return '⚡ Realtime Privacy Guard: Phone / contact number pattern detected. Private session is encrypted.';
+    }
+    if (/\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/.test(raw) || digitCount >= 14) {
+      return '⚡ Realtime Privacy Guard: Financial / card number pattern detected. Protected locally.';
+    }
+    return '⚡ Realtime Privacy Guard: Numerical data pattern detected. Workspace session is private & secure.';
+  }
+
+  // 2. Realtime keyword fragment checks while typing words
+  if (/(adhar|aadhaar|ssn|government id|id number|identity)/i.test(lower)) {
+    return '⚡ Realtime Privacy Guard: Personal identity terms detected. Your data is 100% local & private.';
+  }
+
+  if (/(phone|mobile|contact|call me|whatsapp|telegram|number is)/i.test(lower)) {
+    return '⚡ Realtime Privacy Guard: Contact info terms detected. Session is secure & private.';
+  }
+
+  if (/(pass|password|passcode|secret|api_key|token|credential|private_key|gsk_|sk-)/i.test(lower)) {
+    return '⚡ Realtime Privacy Guard: Credential / security terms detected. Local workspace protected.';
+  }
+
+  if (/(credit|debit|card|cvv|bank|account no|iban|payment)/i.test(lower)) {
+    return '⚡ Realtime Privacy Guard: Financial terms detected. Safe & protected locally.';
+  }
+
+  return null;
+};
+
 const generateIntelligentResponse = (promptText, userProfile = {}) => {
   const clean = promptText ? promptText.trim() : '';
   const lower = clean.toLowerCase();
@@ -335,11 +375,92 @@ const defaultConversations = [
   }
 ];
 
+const TOUR_STEPS = [
+  {
+    step: 1,
+    title: "🤖 Welcome to Clario-1 AI",
+    subtitle: "Conversational Intelligence Engine",
+    content: "Clario is powered by dynamic Grok LLM intelligence, answering any sports, general knowledge, math, science, or coding questions with rich Markdown formatting.",
+    targetId: "chat-main-window",
+    featureTag: "SPOTLIGHT: CONVERSATIONAL ENGINE"
+  },
+  {
+    step: 2,
+    title: "🔮 Reasoning Crystal Telemetry",
+    subtitle: "Real-Time Visual Trust Gauge",
+    content: "The 3D faceted Reasoning Crystal dynamically glows Emerald Green (High Trust), Amber Golden (Moderate), or Crimson Red (Fractured) based on active response reliability.",
+    targetId: "reasoning-crystal-card",
+    featureTag: "SPOTLIGHT: REASONING CRYSTAL"
+  },
+  {
+    step: 3,
+    title: "🎯 Target Reliability Benchmark",
+    subtitle: "Custom Confidence Threshold Slider",
+    content: "Adjust your target benchmark from 40% to 95% (Strict). The Reasoning Crystal and trust score numbers continuously update in real-time.",
+    targetId: "benchmark-slider-card",
+    featureTag: "SPOTLIGHT: BENCHMARK SLIDER"
+  },
+  {
+    step: 4,
+    title: "📊 ADV Advanced Reliability Metrics",
+    subtitle: "Algorithmic Verification Metrics",
+    content: "Expand the ADV dropdown to customize individual metrics: Self-consistency, Semantic agreement, Source quality, Retrieval completeness, and External verification.",
+    targetId: "adv-metrics-toggle",
+    featureTag: "SPOTLIGHT: ADV METRICS DROPDOWN"
+  },
+  {
+    step: 5,
+    title: "🛡️ Real-Time Privacy Guard",
+    subtitle: "100% Local Keystroke Detection",
+    content: "As you type, Privacy Guard evaluates input 100% locally in browser memory for sensitive IDs, Aadhaar numbers, phone numbers, or credentials without transmitting your data.",
+    targetId: "privacy-composer-box",
+    featureTag: "SPOTLIGHT: PRIVACY GUARD"
+  },
+  {
+    step: 6,
+    title: "📐 Fluid Panel Collapse & Profile Triggers",
+    subtitle: "Customizable Workspace Layout",
+    content: "Collapse the left or right panels to maximize your chat space. Re-open anytime via the personalized User Profile Indication card or Basic Trust Score badge.",
+    targetId: "workspace-top-bar",
+    featureTag: "SPOTLIGHT: PANEL CONTROLS"
+  }
+];
+
 function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [view, setView] = useState('auth');
   const [mobileTab, setMobileTab] = useState('chat');
   const [draft, setDraft] = useState('');
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+  const [showTour, setShowTour] = useState(() => {
+    return localStorage.getItem('clario_has_seen_tour') !== 'true';
+  });
+  const [tourStep, setTourStep] = useState(0);
+
+  const startTour = () => {
+    setTourStep(0);
+    setShowTour(true);
+  };
+
+  const nextTourStep = () => {
+    if (tourStep < TOUR_STEPS.length - 1) {
+      setTourStep((prev) => prev + 1);
+    } else {
+      finishTour();
+    }
+  };
+
+  const prevTourStep = () => {
+    if (tourStep > 0) {
+      setTourStep((prev) => prev - 1);
+    }
+  };
+
+  const finishTour = () => {
+    setShowTour(false);
+    localStorage.setItem('clario_has_seen_tour', 'true');
+  };
   
   const [conversations, setConversations] = useState(() => {
     try {
@@ -937,30 +1058,60 @@ function App() {
     ? 'harmonizing'
     : 'fractured';
 
-  const renderTrustPanel = () => (
-    <aside className="trust-panel">
-      {/* Upper Division: Fantasy Crystal Visualizer */}
-      <div className="trust-upper-division">
-        <div className="panel-header-row">
-          <div>
-            <p className="eyebrow">Reasoning Crystal</p>
-            <h4>Visual Intelligence</h4>
-          </div>
-          <button
-            type="button"
-            className="theme-toggle-btn"
-            onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
-          >
-            <span className="theme-icon">{theme === 'dark' ? '🌙' : '☀️'}</span>
-            <span className="theme-label">{theme === 'dark' ? 'Dark' : 'Light'}</span>
-          </button>
-        </div>
+  const renderTrustPanel = () => {
+    const lastUserMsgText = messages.filter((m) => m.sender === 'user').slice(-1)[0]?.text || '';
+    const activePromptSnippet = lastUserMsgText
+      ? (lastUserMsgText.length > 28 ? lastUserMsgText.substring(0, 26) + '...' : lastUserMsgText)
+      : 'Active Session';
 
-        <div className={`crystal-container-card ${crystalState}`}>
-          <div className="crystal-stage">
-            <div className="crystal-aura-ring ring-1" />
-            <div className="crystal-aura-ring ring-2" />
+    return (
+      <aside className="trust-panel">
+        {/* Upper Division: Fantasy Crystal Visualizer */}
+        <div className="trust-upper-division">
+          <div className="panel-header-row">
+            <div>
+              <p className="eyebrow">Reasoning Crystal</p>
+              <h4>Visual Intelligence</h4>
+            </div>
+            <div className="header-actions-group">
+              <button
+                type="button"
+                className="theme-toggle-btn"
+                onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+                title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+              >
+                <span className="theme-icon">{theme === 'dark' ? '🌙' : '☀️'}</span>
+                <span className="theme-label">{theme === 'dark' ? 'Dark' : 'Light'}</span>
+              </button>
+              <button
+                type="button"
+                className="panel-toggle-btn"
+                onClick={() => setIsRightCollapsed(true)}
+                title="Collapse Trust Panel"
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+
+          <div className={`crystal-container-card ${crystalState} ${isThinking ? 'scanning' : ''} ${showTour && tourStep === 1 ? 'limelight-spotlight-active' : ''}`} id="reasoning-crystal-card">
+            <div className="crystal-beacon-header">
+              <div className="realtime-beacon-badge">
+                <span className="beacon-dot" />
+                <span className="beacon-text">REALTIME ACTIVE GAUGE</span>
+              </div>
+            </div>
+
+            <div className="active-context-banner">
+              <span className="context-icon">⚡</span>
+              <span className="context-label">Gauging Active Response:</span>
+              <span className="context-snippet" title={lastUserMsgText || 'Active Session'}>"{activePromptSnippet}"</span>
+            </div>
+
+            <div className="crystal-stage">
+              {isThinking && <div className="telemetry-scan-beam" />}
+              <div className="crystal-aura-ring ring-1" />
+              <div className="crystal-aura-ring ring-2" />
 
             <div className="crystal-gem">
               <div className="facet facet-top-1" />
@@ -998,7 +1149,7 @@ function App() {
               </span>
             </div>
             <div className="cumulative-score-display">
-              <span className="score-val">{cumulativeTrustScore}%</span>
+              <span className={`score-val ${crystalState}`}>{cumulativeTrustScore}%</span>
               <span className="score-lbl">Trust Score</span>
             </div>
           </div>
@@ -1007,11 +1158,34 @@ function App() {
 
       <div className="division-divider" />
 
-      {/* Lower Division: Expandable toggle "ADV" for advanced metrics */}
+      {/* Lower Division: Target Reliability Benchmark & ADV Metrics */}
       <div className="trust-lower-division">
+        {/* Target Reliability Benchmark Slider (Permanently Visible) */}
+        <div className={`threshold-control-card ${showTour && tourStep === 2 ? 'limelight-spotlight-active' : ''}`} id="benchmark-slider-card">
+          <div className="threshold-header">
+            <span className="threshold-title">Target Reliability Benchmark</span>
+            <span className="threshold-val">{reliabilityThreshold}%</span>
+          </div>
+          <input
+            type="range"
+            min="40"
+            max="95"
+            step="1"
+            value={reliabilityThreshold}
+            onChange={(e) => setReliabilityThreshold(Number(e.target.value))}
+            className="threshold-slider"
+          />
+          <div className="threshold-labels">
+            <span>40% (Low)</span>
+            <span>Target: {reliabilityThreshold}%</span>
+            <span>95% (Strict)</span>
+          </div>
+        </div>
+
         <button
           type="button"
-          className="adv-toggle-btn"
+          className={`adv-toggle-btn ${showTour && tourStep === 3 ? 'limelight-spotlight-active' : ''}`}
+          id="adv-metrics-toggle"
           onClick={() => setShowAdv((prev) => !prev)}
         >
           <div className="adv-left">
@@ -1023,28 +1197,6 @@ function App() {
 
         {showAdv && (
           <div className="adv-controls-container">
-            {/* Custom Reliability Threshold Slider */}
-            <div className="threshold-control-card">
-              <div className="threshold-header">
-                <span className="threshold-title">Target Reliability Benchmark</span>
-                <span className="threshold-val">{reliabilityThreshold}%</span>
-              </div>
-              <input
-                type="range"
-                min="40"
-                max="95"
-                step="1"
-                value={reliabilityThreshold}
-                onChange={(e) => setReliabilityThreshold(Number(e.target.value))}
-                className="threshold-slider"
-              />
-              <div className="threshold-labels">
-                <span>40% (Low)</span>
-                <span>Target: {reliabilityThreshold}%</span>
-                <span>95% (Strict)</span>
-              </div>
-            </div>
-
             <div className="metrics-selector-header">
               <span>Active Gauging Metrics ({selectedMetricLabels.length}/5)</span>
             </div>
@@ -1090,6 +1242,7 @@ function App() {
       </div>
     </aside>
   );
+};
 
   const renderAuthView = () => (
     <div className={`page-shell auth-shell ${theme}`} data-theme={theme}>
@@ -1232,15 +1385,23 @@ function App() {
           </button>
         </div>
 
-        <div className="chatbot-card">
-          <aside className={`sidebar ${mobileTab !== 'topics' ? 'mobile-hidden' : ''}`}>
+        <div className={`chatbot-card ${isLeftCollapsed ? 'left-collapsed' : ''} ${isRightCollapsed ? 'right-collapsed' : ''}`}>
+          <aside className={`sidebar ${mobileTab !== 'topics' ? 'mobile-hidden' : ''} ${isLeftCollapsed ? 'collapsed-panel' : ''}`}>
             <div className="sidebar-top">
               <div className="brand-block compact">
                 <div className="logo-mark">C</div>
-                <div>
+                <div className="brand-text-wrapper">
                   <h2>CLARIO-1</h2>
                   <p>Insight assistant</p>
                 </div>
+                <button
+                  type="button"
+                  className="panel-toggle-btn sidebar-hide-btn"
+                  onClick={() => setIsLeftCollapsed(true)}
+                  title="Collapse Left Sidebar"
+                >
+                  ◀
+                </button>
               </div>
 
               <div className="sidebar-section">
@@ -1373,13 +1534,57 @@ function App() {
           </aside>
 
           <main className={`chat-main ${mobileTab !== 'chat' ? 'mobile-hidden' : ''}`}>
-            {conversations.length > 0 && (
-              <div className="chat-top-actions">
-                <span className="chat-msg-count">{conversations.length} conversation{conversations.length > 1 ? 's' : ''} in workspace</span>
+            <div className={`chat-top-actions ${showTour && tourStep === 5 ? 'limelight-spotlight-active' : ''}`} id="workspace-top-bar">
+              <div className="top-actions-left">
+                {isLeftCollapsed && (
+                  <button
+                    type="button"
+                    className="collapsed-profile-trigger"
+                    onClick={() => setIsLeftCollapsed(false)}
+                    title="Open Left Panel & History"
+                  >
+                    <div className="avatar mini-avatar">
+                      {(formData.name || 'Alicia Chen').split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()}
+                    </div>
+                    <span className="trigger-name">{formData.name || 'Alicia Chen'}</span>
+                    <span className="trigger-arrow">▶</span>
+                  </button>
+                )}
+                {conversations.length > 0 && (
+                  <span className="chat-msg-count">
+                    {conversations.length} conversation{conversations.length > 1 ? 's' : ''} in workspace
+                  </span>
+                )}
               </div>
-            )}
 
-            <section className={`chat-window ${!messages.some((m) => m.sender === 'user') ? 'centered-hero' : ''}`}>
+              <div className="top-actions-right">
+                <button
+                  type="button"
+                  className="feature-guide-btn"
+                  onClick={startTour}
+                  title="Open Guided Feature Tour"
+                >
+                  <span className="guide-icon">📖</span>
+                  <span className="guide-text">Feature Guide</span>
+                </button>
+
+                {isRightCollapsed && (
+                  <button
+                    type="button"
+                    className={`collapsed-trust-trigger ${crystalState}`}
+                    onClick={() => setIsRightCollapsed(false)}
+                    title="Open Right Trust Panel"
+                  >
+                    <span className="trigger-arrow">◀</span>
+                    <span className={`trigger-dot ${crystalState}`} />
+                    <span className="trigger-score">{cumulativeTrustScore}%</span>
+                    <span className="trigger-label">Trust Score</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <section className={`chat-window ${!messages.some((m) => m.sender === 'user') ? 'centered-hero' : ''} ${showTour && tourStep === 0 ? 'limelight-spotlight-active' : ''}`} id="chat-main-window">
               {!messages.some((m) => m.sender === 'user') ? (
                 <div className="chat-tagline-hero">
                   <span className="tagline-badge-hero">CLARIO-1</span>
@@ -1415,11 +1620,37 @@ function App() {
                 </div>
               ) : (
                 <>
-                  {messages.map((message) => (
-                    <div key={message.id} className={`bubble ${message.sender}`}>
-                      {renderFormattedMarkdown(message.text)}
-                    </div>
-                  ))}
+                  {messages.map((message) => {
+                    const isBot = message.sender === 'bot';
+                    let botTrustGradeClass = '';
+                    let botTrustLabel = '';
+
+                    if (isBot) {
+                      if (crystalState === 'radiant') {
+                        botTrustGradeClass = 'trust-grade-radiant';
+                        botTrustLabel = 'Verified High Trust';
+                      } else if (crystalState === 'harmonizing') {
+                        botTrustGradeClass = 'trust-grade-harmonizing';
+                        botTrustLabel = 'Moderate Confidence';
+                      } else {
+                        botTrustGradeClass = 'trust-grade-fractured';
+                        botTrustLabel = 'Low Confidence / Risk';
+                      }
+                    }
+
+                    return (
+                      <div key={message.id} className={`bubble ${message.sender} ${isBot ? botTrustGradeClass : ''}`}>
+                        {isBot && (
+                          <div className={`message-trust-badge ${botTrustGradeClass}`}>
+                            <span className="trust-badge-dot" />
+                            <span className="trust-badge-score">{cumulativeTrustScore}%</span>
+                            <span className="trust-badge-label">{botTrustLabel}</span>
+                          </div>
+                        )}
+                        {renderFormattedMarkdown(message.text)}
+                      </div>
+                    );
+                  })}
                   {isThinking && (
                     <div className="bubble bot thinking-bubble">
                       <div className="thinking-dots">
@@ -1435,20 +1666,33 @@ function App() {
               )}
             </section>
 
-            <form className="composer" onSubmit={handleSend}>
-              <input
-                type="text"
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder="Ask about trust, reasoning, or your next insight..."
-              />
-              <button type="submit" className="primary-btn compact-btn" disabled={isThinking}>
-                {isThinking ? 'Thinking...' : 'Send'}
-              </button>
-            </form>
+            {(() => {
+              const sensitiveNotice = checkSensitiveData(draft);
+              return (
+                <div className={`composer-wrapper ${showTour && tourStep === 4 ? 'limelight-spotlight-active' : ''}`} id="privacy-composer-box">
+                  <form className="composer" onSubmit={handleSend}>
+                    <input
+                      type="text"
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                      placeholder="Ask about trust, reasoning, or your next insight..."
+                    />
+                    <button type="submit" className="primary-btn compact-btn" disabled={isThinking}>
+                      {isThinking ? 'Thinking...' : 'Send'}
+                    </button>
+                  </form>
+                  {sensitiveNotice && (
+                    <div className="privacy-hint-bar" role="status" aria-live="polite">
+                      <span className="privacy-hint-shield">🛡️</span>
+                      <span className="privacy-hint-text">{sensitiveNotice}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </main>
 
-          <aside className={`trust-column ${mobileTab !== 'trust' ? 'mobile-hidden' : ''}`}>
+          <aside className={`trust-column ${mobileTab !== 'trust' ? 'mobile-hidden' : ''} ${isRightCollapsed ? 'collapsed-panel' : ''}`}>
             {renderTrustPanel()}
           </aside>
         </div>
@@ -1545,6 +1789,16 @@ function App() {
             </div>
 
             <div className="modal-footer">
+              <button
+                type="button"
+                className="secondary-btn tour-replay-btn"
+                onClick={() => {
+                  setShowProfileModal(false);
+                  startTour();
+                }}
+              >
+                📖 Replay Feature Guide
+              </button>
               <button
                 type="button"
                 className="secondary-btn"
@@ -1764,6 +2018,64 @@ function App() {
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Interactive Guided Walkthrough Feature Tour Modal */}
+      {showTour && (
+        <div className="modal-backdrop tour-backdrop" onClick={finishTour}>
+          <div className={`tour-card step-${tourStep}`} onClick={(e) => e.stopPropagation()}>
+            <div className="tour-badge-row">
+              <div className="tour-step-tags">
+                <span className="tour-step-badge">Step {tourStep + 1} of {TOUR_STEPS.length}</span>
+                <span className="tour-spotlight-tag">{TOUR_STEPS[tourStep].featureTag}</span>
+              </div>
+              <button type="button" className="tour-close-btn" onClick={finishTour} title="Skip Tour">✕ Skip</button>
+            </div>
+
+            <div className="tour-body">
+              <div className="tour-icon-wrap">
+                <span className="tour-big-icon">
+                  {tourStep === 0 && "🤖"}
+                  {tourStep === 1 && "🔮"}
+                  {tourStep === 2 && "🎯"}
+                  {tourStep === 3 && "📊"}
+                  {tourStep === 4 && "🛡️"}
+                  {tourStep === 5 && "📐"}
+                </span>
+              </div>
+              <div className="tour-text-content">
+                <h3 className="tour-title">{TOUR_STEPS[tourStep].title}</h3>
+                <p className="tour-subtitle">{TOUR_STEPS[tourStep].subtitle}</p>
+                <p className="tour-description">{TOUR_STEPS[tourStep].content}</p>
+              </div>
+            </div>
+
+            <div className="tour-progress-bar">
+              <div
+                className="tour-progress-fill"
+                style={{ width: `${((tourStep + 1) / TOUR_STEPS.length) * 100}%` }}
+              />
+            </div>
+
+            <div className="tour-footer">
+              <button
+                type="button"
+                className="secondary-btn compact-btn"
+                onClick={prevTourStep}
+                disabled={tourStep === 0}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="primary-btn compact-btn"
+                onClick={nextTourStep}
+              >
+                {tourStep === TOUR_STEPS.length - 1 ? 'Finish & Explore 🚀' : 'Next Step ▶'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
