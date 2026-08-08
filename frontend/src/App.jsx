@@ -159,144 +159,11 @@ const checkSensitiveData = (text) => {
   return null;
 };
 
-const generateIntelligentResponse = (promptText, userProfile = {}) => {
-  const clean = promptText ? promptText.trim() : '';
-  const lower = clean.toLowerCase();
-  const userName = userProfile.name && userProfile.name.trim() ? userProfile.name.trim() : 'Analyst';
-
-  if (!clean) {
-    return `Hello ${userName}! I'm Clario. Feel free to ask me anything!`;
-  }
-
-  // 1. User Name Queries (e.g. "What is my name", "what is mmy name", "my name")
-  if (/\b(what\s+is\s+m*y\s+name|what'?s\s+m*y\s+name|do\s+you\s+know\s+my\s+name|tell\s+me\s+my\s+name)\b/.test(lower)) {
-    const emailStr = userProfile.email ? ` (${userProfile.email})` : '';
-    return `Your name is **${userName}**! You are signed in as ${userName}${emailStr} on the ${userProfile.plan || 'Enterprise XAI Pro'} plan.`;
-  }
-
-  // 2. Account & Profile Queries
-  if (/\b(who am i|my profile|my account|my role|my details|my plan|user profile)\b/.test(lower)) {
-    const emailStr = userProfile.email ? ` (${userProfile.email})` : '';
-    return `You are currently signed in as **${userName}**${emailStr}.
-
-• **Workspace Role:** ${userProfile.role || 'Verified XAI Analyst'}
-• **Workspace Plan:** ${userProfile.plan || 'Enterprise XAI Pro'}
-
-I have access to your session profile to provide personalized assistance during our conversation!`;
-  }
-
-  // 3. PII, Aadhaar & Phone Number Prediction Queries (e.g. "predict my phone number", "adhar no 3241...")
-  if (/\b(adhar|aadhaar|phone\s+number|mobile\s+number|predict\s+my|predict\s+phone|ssn|credit\s+card)\b/.test(lower)) {
-    return `No, ${userName}, it is not possible to predict or derive a phone number from an Aadhaar number or ID number.
-
-1. **Data Privacy & Security**: Aadhaar/ID numbers and phone numbers are stored in separate, encrypted databases. There is no mathematical formula or link connecting a random ID to a phone number.
-2. **Privacy Notice**: Please avoid sharing real personally identifiable information (PII) like your Aadhaar number or phone number in chat windows to keep your private data safe.
-
-Let me know if you have any questions about data privacy, security, or workspace features!`;
-  }
-
-  // 4. General Prediction & Calculation Queries
-  if (/\b(can\s+you\s+predict|predict|prediction|forecast|calculate\s+my)\b/.test(lower)) {
-    return `Regarding your query **“${clean}”**, ${userName}:
-
-AI models generate predictions based on structured input data, statistical patterns, and historical evidence. However, private personal records (like phone numbers, passwords, or personal IDs) cannot be predicted or derived from unrelated numbers.
-
-If you have a data analysis, mathematical calculation, or trend forecasting question, please share the dataset or context and I'll be glad to help!`;
-  }
-
-  // 5. AI Definition Queries (e.g. "what do we mean by ai", "what is ai", "define ai")
-  if (/\b(what\s+(do\s+we\s+mean\s+by|is)\s+ai|define\s+ai|meaning\s+of\s+ai|artificial\s+intelligence)\b/.test(lower)) {
-    return `**Artificial Intelligence (AI)** refers to computer systems engineered to simulate human-like cognitive abilities, including learning, reasoning, pattern recognition, and decision-making.
-
-In modern technology, AI encompasses machine learning algorithms, deep neural networks, natural language processing, and Explainable AI (XAI) platforms like **CLARIO-1** that provide transparent trust and confidence metrics.`;
-  }
-
-  // 6. Machine Learning & XAI Concept Definitions
-  if (/\b(machine learning|ml)\b/.test(lower)) {
-    return `**Machine Learning (ML)** is a subset of AI focused on training algorithms to learn patterns from data and make predictions without being explicitly programmed for every scenario.`;
-  }
-
-  if (/\b(explainable ai|xai)\b/.test(lower)) {
-    return `**Explainable AI (XAI)** refers to tools and frameworks that make artificial intelligence decision-making processes transparent, understandable, and verifiable by human experts.`;
-  }
-
-  // 7. Greetings & Small Talk
-  if (/^(hi+|hello+|hey+|what'?s up|greetings|good morning|good afternoon|good evening|yo)\b/.test(lower)) {
-    return `Hey there, ${userName}! I'm Clario, your AI assistant. How's it going today? What can I help you explore or answer?`;
-  }
-
-  // 8. Identity / Name of Assistant
-  if (/\b(who are you|your name|what'?s your name|tell me about yourself)\b/.test(lower)) {
-    return `I'm Clario, your personalized AI assistant, ${userName}! I'm here to help answer your questions, assist with coding and analysis, brainstorm ideas, or guide you through your XAI metrics. What would you like to work on?`;
-  }
-
-  // 9. Help & General Workspace Guidance
-  if (/^(what do i do|what can you do|help|how to use|how does this work)\b/.test(lower)) {
-    return `Welcome, ${userName}! I'm Clario, your AI assistant. You can ask me almost anything, such as:
-
-• General knowledge and Q&A (just like ChatGPT or Gemini)
-• Coding, debugging, and data analysis
-• Explanations of complex concepts or reasoning
-• Guiding you through the trust metrics and dashboard settings
-
-What would you like to explore or work on right now?`;
-  }
-
-  // 10. Gratitude / Thanks
-  if (/\b(thanks|thank you|thx|awesome|cool|great)\b/.test(lower)) {
-    return `You're very welcome, ${userName}! Let me know if there's anything else I can help you with.`;
-  }
-
-  // 11. Programming / Code
-  if (/\b(code|python|javascript|react|html|css|sql|function|api|bug|error|script)\b/.test(lower)) {
-    return `I'd be happy to help you with your coding question, ${userName}, regarding: “${clean}”.
-
-Could you share a snippet of your code or specify the exact behavior or error you're encountering? I can assist with debugging, optimization, writing functions, or setting up architecture!`;
-  }
-
-  // 12. Trust & XAI Specifics
-  if (/\b(trust score|confidence score|reasoning crystal|vector retrieval)\b/.test(lower)) {
-    return `The CLARIO-1 workspace evaluates AI predictions across multiple trust metrics, ${userName}. These include self-consistency, semantic agreement, and source fidelity. The Reasoning Crystal on the right panel visualizes the real-time confidence of the active execution path.`;
-  }
-
-  // 13. Sports & Current Events Queries (e.g. "who won 2026 ipl final", "ipl winner", "world cup")
-  if (/\b(ipl|cricket|world\s+cup|super\s+bowl|champions\s+league|trophy|match\s+final)\b/.test(lower)) {
-    if (lower.includes('2026') && lower.includes('ipl')) {
-      return `As of now, the **2026 Indian Premier League (IPL)** season has not yet taken place or concluded.
-
-For recent IPL championship results:
-• **IPL 2024 Winners**: **Kolkata Knight Riders (KKR)** won by defeating Sunrisers Hyderabad (SRH) in the final.
-• **IPL 2023 Winners**: **Chennai Super Kings (CSK)** won by defeating Gujarat Titans (GT).
-• **IPL 2022 Winners**: **Gujarat Titans (GT)** won in their debut season against Rajasthan Royals.
-
-Would you like more details on IPL team statistics, player records, or historical winners?`;
-    }
-    return `Here are the details for your sports query regarding **“${clean}”**:
-
-• **IPL 2024 Champion**: Kolkata Knight Riders (KKR)
-• **IPL 2023 Champion**: Chennai Super Kings (CSK)
-• **IPL Most Titles**: Mumbai Indians (5) & Chennai Super Kings (5)
-
-Feel free to ask about specific teams, player records, match scores, or tournament statistics!`;
-  }
-
-  // 14. General Knowledge & Who/Where/When Queries
-  if (lower.startsWith('who won') || lower.startsWith('who is') || lower.startsWith('who was') || lower.startsWith('where is') || lower.startsWith('when is') || lower.startsWith('when was') || lower.startsWith('what is the capital')) {
-    return `Here is the factual information regarding **“${clean}”**:
-
-• For sports championships or annual events, results depend on the specific tournament year.
-• Historical events and geographical records are verified across standard knowledge bases.
-
-If you're asking about a specific year, player, country, or event, feel free to specify and I'll provide full details!`;
-  }
-
-  // 15. Natural ChatGPT / Gemini Conversational Fallback
-  return `Here is what you need to know regarding **“${clean}”**:
-
-This question touches on key principles and practical context. Depending on your specific focus, we can analyze the underlying facts, logical mechanisms, or step-by-step applications.
-
-Feel free to specify any particular angle, code example, or follow-up question you'd like to explore!`;
-};
+// NOTE: There is intentionally no local "smart" answer generator here anymore.
+// Every chatbot reply comes straight from the Grok LLM backend (`/api/chat/message`).
+// The only client-side text generation left is `deriveConversationTitle`, which is
+// purely cosmetic — it picks a sidebar icon/category for a conversation, it does not
+// answer the user's question.
 
 const deriveConversationTitle = (text) => {
   if (!text || typeof text !== 'string') {
@@ -444,6 +311,10 @@ const TOUR_STEPS = [
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://clario-1backend.onrender.com';
 
+// How long we wait for the Grok LLM backend to respond before giving up.
+// Real LLM completions commonly take several seconds — keep this generous.
+const CHAT_REQUEST_TIMEOUT_MS = 30000;
+
 function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [view, setView] = useState('auth');
@@ -503,7 +374,7 @@ function App() {
 
     return () => clearTimeout(timer);
   }, [tourStep, showTour]);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -998,6 +869,65 @@ function App() {
     };
   }, [activeConvId, messages]);
 
+  /**
+   * Sends the user's message to the Grok LLM backend and returns whatever text
+   * the model produced. This is the ONLY source of bot replies — there is no
+   * local rule-based fallback that fabricates an answer. If the request fails,
+   * the caller shows an honest "couldn't reach the AI service" message instead.
+   */
+  const fetchBotReply = async ({ userText, topic, userProfile }) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CHAT_REQUEST_TIMEOUT_MS);
+
+    try {
+      const backendRes = await fetch(`${API_BASE_URL}/api/chat/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: currentUserId,
+          text: userText,
+          topic,
+          user_name: userProfile.name,
+          user_email: userProfile.email,
+          user_role: userProfile.role,
+          workspace_plan: userProfile.plan
+        }),
+        signal: controller.signal
+      });
+
+      if (!backendRes.ok) {
+        const errBody = await backendRes.text().catch(() => '');
+        console.warn(`Chat backend responded with ${backendRes.status}: ${errBody}`);
+        return null;
+      }
+
+      const data = await backendRes.json();
+
+      // Support either an [userMessage, botMessage] pair or a plain { text } payload.
+      if (Array.isArray(data) && data.length >= 2 && data[1]?.text) {
+        return data[1].text;
+      }
+      if (data?.text) {
+        return data.text;
+      }
+      if (typeof data === 'string' && data.trim()) {
+        return data;
+      }
+
+      console.warn('Chat backend returned an unexpected payload shape:', data);
+      return null;
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.warn(`Chat backend request timed out after ${CHAT_REQUEST_TIMEOUT_MS}ms`);
+      } else {
+        console.warn('Chat backend request failed:', err);
+      }
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+
   const handleSend = async (event) => {
     if (event) event.preventDefault();
     if (!draft.trim() || isThinking) return;
@@ -1010,9 +940,6 @@ function App() {
     const botTempId = 'temp-' + (Date.now() + 1);
     const nowIso = new Date().toISOString();
 
-    let targetConvId = activeConvId;
-    let targetTitle = '';
-
     const userProfile = {
       name: formData.name || 'Alicia Chen',
       email: formData.email || 'alicia.chen@clario.ai',
@@ -1020,35 +947,26 @@ function App() {
       plan: 'Enterprise XAI Pro'
     };
 
-    let generatedBotText = generateIntelligentResponse(userText, userProfile);
+    // Work out which conversation this message belongs to (and its topic label)
+    // up front, so we can send an accurate topic to the backend on the first call.
+    const isNewConversation = !activeConvId || !conversations.some((c) => c.id === activeConvId);
+    let targetConvId = activeConvId;
+    let targetTitle;
+    let derivedForNewConv = null;
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      const backendRes = await fetch(`${API_BASE_URL}/api/chat/message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: currentUserId,
-          text: userText,
-          topic: targetTitle || 'Trust Analysis',
-          user_name: userProfile.name,
-          user_email: userProfile.email,
-          user_role: userProfile.role,
-          workspace_plan: userProfile.plan
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      if (backendRes.ok) {
-        const data = await backendRes.json();
-        if (Array.isArray(data) && data.length >= 2 && data[1]?.text) {
-          generatedBotText = data[1].text;
-        }
-      }
-    } catch (e) {
-      // Fallback cleanly to local intelligent response generator
+    if (isNewConversation) {
+      derivedForNewConv = deriveConversationTitle(userText);
+      targetTitle = derivedForNewConv.title;
+      targetConvId = 'conv-' + Date.now();
+    } else {
+      const existingConv = conversations.find((c) => c.id === targetConvId);
+      targetTitle = existingConv?.title || deriveConversationTitle(userText).title;
     }
+
+    // Get the real answer from Grok. No hardcoded/rule-based text is generated here.
+    const botReply = await fetchBotReply({ userText, topic: targetTitle, userProfile });
+    const generatedBotText = botReply
+      || "Sorry, I couldn't reach the AI service just now. Please check your connection and try again in a moment.";
 
     try {
       const metricRes = await fetch(`${API_BASE_URL}/api/analysis/metrics`, {
@@ -1069,19 +987,15 @@ function App() {
       console.warn('Metrics calculation backend note:', err);
     }
 
-    if (!targetConvId || !conversations.some((c) => c.id === targetConvId)) {
-      const derived = deriveConversationTitle(userText);
-      targetTitle = derived.title;
-      targetConvId = 'conv-' + Date.now();
+    const userMsg = { id: userTempId, sender: 'user', text: userText, topic: targetTitle, createdAt: nowIso };
+    const botMsg = { id: botTempId, sender: 'bot', text: generatedBotText, topic: targetTitle, createdAt: nowIso };
 
-      const userMsg = { id: userTempId, sender: 'user', text: userText, topic: targetTitle, createdAt: nowIso };
-      const botMsg = { id: botTempId, sender: 'bot', text: generatedBotText, topic: targetTitle, createdAt: nowIso };
-
+    if (isNewConversation) {
       const newConv = {
         id: targetConvId,
-        title: derived.title,
-        category: derived.category,
-        icon: derived.icon,
+        title: derivedForNewConv.title,
+        category: derivedForNewConv.category,
+        icon: derivedForNewConv.icon,
         createdAt: nowIso,
         messages: [userMsg, botMsg]
       };
@@ -1089,12 +1003,6 @@ function App() {
       setConversations((prev) => [newConv, ...prev]);
       setActiveConvId(targetConvId);
     } else {
-      const existingConv = conversations.find((c) => c.id === targetConvId);
-      targetTitle = existingConv?.title || deriveConversationTitle(userText).title;
-
-      const userMsg = { id: userTempId, sender: 'user', text: userText, topic: targetTitle, createdAt: nowIso };
-      const botMsg = { id: botTempId, sender: 'bot', text: generatedBotText, topic: targetTitle, createdAt: nowIso };
-
       setConversations((prev) =>
         prev.map((c) =>
           c.id === targetConvId
@@ -1173,8 +1081,8 @@ function App() {
   const crystalState = cumulativeTrustScore >= reliabilityThreshold
     ? 'radiant'
     : cumulativeTrustScore >= Math.max(40, reliabilityThreshold - 15)
-    ? 'harmonizing'
-    : 'fractured';
+      ? 'harmonizing'
+      : 'fractured';
 
   const renderTrustPanel = () => {
     const lastUserMsgText = messages.filter((m) => m.sender === 'user').slice(-1)[0]?.text || '';
@@ -1231,136 +1139,136 @@ function App() {
               <div className="crystal-aura-ring ring-1" />
               <div className="crystal-aura-ring ring-2" />
 
-            <div className="crystal-gem">
-              <div className="facet facet-top-1" />
-              <div className="facet facet-top-2" />
-              <div className="facet facet-top-3" />
-              <div className="facet facet-top-4" />
-              <div className="facet facet-bottom-1" />
-              <div className="facet facet-bottom-2" />
-              <div className="facet facet-bottom-3" />
-              <div className="facet facet-bottom-4" />
-              
-              <div className="crystal-core" />
-              
-              {crystalState === 'fractured' && (
-                <div className="crystal-fracture-overlay">
-                  <div className="crack crack-1" />
-                  <div className="crack crack-2" />
-                  <div className="crack crack-3" />
-                </div>
-              )}
-            </div>
+              <div className="crystal-gem">
+                <div className="facet facet-top-1" />
+                <div className="facet facet-top-2" />
+                <div className="facet facet-top-3" />
+                <div className="facet facet-top-4" />
+                <div className="facet facet-bottom-1" />
+                <div className="facet facet-bottom-2" />
+                <div className="facet facet-bottom-3" />
+                <div className="facet facet-bottom-4" />
 
-            <div className="shard shard-1" />
-            <div className="shard shard-2" />
-            <div className="shard shard-3" />
-          </div>
+                <div className="crystal-core" />
 
-          <div className="crystal-meta-row">
-            <div className="crystal-status-badge">
-              <span className={`status-orb-dot ${crystalState}`} />
-              <span className="crystal-status-text">
-                {crystalState === 'radiant' && 'Radiant Core'}
-                {crystalState === 'harmonizing' && 'Harmonic Core'}
-                {crystalState === 'fractured' && 'Fractured Core'}
-              </span>
-            </div>
-            <div className="cumulative-score-display">
-              <span className={`score-val ${crystalState}`}>{cumulativeTrustScore}%</span>
-              <span className="score-lbl">Trust Score</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="division-divider" />
-
-      {/* Lower Division: Target Reliability Benchmark & ADV Metrics */}
-      <div className="trust-lower-division">
-        {/* Target Reliability Benchmark Slider (Permanently Visible) */}
-        <div className={`threshold-control-card ${showTour && tourStep === 3 ? 'limelight-spotlight-active' : ''}`} id="benchmark-slider-card">
-          <div className="threshold-header">
-            <span className="threshold-title">Target Reliability Benchmark</span>
-            <span className="threshold-val">{reliabilityThreshold}%</span>
-          </div>
-          <input
-            type="range"
-            min="40"
-            max="95"
-            step="1"
-            value={reliabilityThreshold}
-            onChange={(e) => setReliabilityThreshold(Number(e.target.value))}
-            className="threshold-slider"
-          />
-          <div className="threshold-labels">
-            <span>40% (Low)</span>
-            <span>Target: {reliabilityThreshold}%</span>
-            <span>95% (Strict)</span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className={`adv-toggle-btn ${showTour && tourStep === 4 ? 'limelight-spotlight-active' : ''}`}
-          id="adv-metrics-toggle"
-          onClick={() => setShowAdv((prev) => !prev)}
-        >
-          <div className="adv-left">
-            <span className="adv-tag">ADV</span>
-            <span className="adv-label">Advanced Metrics</span>
-          </div>
-          <span className={`adv-chevron ${showAdv ? 'expanded' : ''}`}>▼</span>
-        </button>
-
-        {showAdv && (
-          <div className="adv-controls-container">
-            <div className="metrics-selector-header">
-              <span>Active Gauging Metrics ({selectedMetricLabels.length}/5)</span>
-            </div>
-
-            <div className="trust-metrics-scroll">
-              {trustMetrics.map(({ label, description, weight, value }) => {
-                const isSelected = selectedMetricLabels.includes(label);
-                return (
-                  <div key={label} className={`trust-metric ${!isSelected ? 'disabled-metric' : ''}`}>
-                    <div className="metric-select-row">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleMetricSelection(label)}
-                        className="metric-checkbox"
-                        id={`metric-check-${label.replace(/\s+/g, '-')}`}
-                      />
-                      <label htmlFor={`metric-check-${label.replace(/\s+/g, '-')}`} className="metric-meta-wrapper">
-                        <div className="metric-meta">
-                          <div>
-                            <span className="metric-label">{label}</span>
-                            {description && <p className="metric-desc">{description}</p>}
-                          </div>
-                          <span className="metric-value">{Math.round(value)}%</span>
-                        </div>
-                      </label>
-                    </div>
-
-                    {isSelected && (
-                      <>
-                        <div className="metric-scale">
-                          <div className="metric-fill" style={{ width: `${value}%` }} />
-                        </div>
-                        <div className="metric-weight">Weight: {weight}%</div>
-                      </>
-                    )}
+                {crystalState === 'fractured' && (
+                  <div className="crystal-fracture-overlay">
+                    <div className="crack crack-1" />
+                    <div className="crack crack-2" />
+                    <div className="crack crack-3" />
                   </div>
-                );
-              })}
+                )}
+              </div>
+
+              <div className="shard shard-1" />
+              <div className="shard shard-2" />
+              <div className="shard shard-3" />
+            </div>
+
+            <div className="crystal-meta-row">
+              <div className="crystal-status-badge">
+                <span className={`status-orb-dot ${crystalState}`} />
+                <span className="crystal-status-text">
+                  {crystalState === 'radiant' && 'Radiant Core'}
+                  {crystalState === 'harmonizing' && 'Harmonic Core'}
+                  {crystalState === 'fractured' && 'Fractured Core'}
+                </span>
+              </div>
+              <div className="cumulative-score-display">
+                <span className={`score-val ${crystalState}`}>{cumulativeTrustScore}%</span>
+                <span className="score-lbl">Trust Score</span>
+              </div>
             </div>
           </div>
-        )}
-      </div>
-    </aside>
-  );
-};
+        </div>
+
+        <div className="division-divider" />
+
+        {/* Lower Division: Target Reliability Benchmark & ADV Metrics */}
+        <div className="trust-lower-division">
+          {/* Target Reliability Benchmark Slider (Permanently Visible) */}
+          <div className={`threshold-control-card ${showTour && tourStep === 3 ? 'limelight-spotlight-active' : ''}`} id="benchmark-slider-card">
+            <div className="threshold-header">
+              <span className="threshold-title">Target Reliability Benchmark</span>
+              <span className="threshold-val">{reliabilityThreshold}%</span>
+            </div>
+            <input
+              type="range"
+              min="40"
+              max="95"
+              step="1"
+              value={reliabilityThreshold}
+              onChange={(e) => setReliabilityThreshold(Number(e.target.value))}
+              className="threshold-slider"
+            />
+            <div className="threshold-labels">
+              <span>40% (Low)</span>
+              <span>Target: {reliabilityThreshold}%</span>
+              <span>95% (Strict)</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className={`adv-toggle-btn ${showTour && tourStep === 4 ? 'limelight-spotlight-active' : ''}`}
+            id="adv-metrics-toggle"
+            onClick={() => setShowAdv((prev) => !prev)}
+          >
+            <div className="adv-left">
+              <span className="adv-tag">ADV</span>
+              <span className="adv-label">Advanced Metrics</span>
+            </div>
+            <span className={`adv-chevron ${showAdv ? 'expanded' : ''}`}>▼</span>
+          </button>
+
+          {showAdv && (
+            <div className="adv-controls-container">
+              <div className="metrics-selector-header">
+                <span>Active Gauging Metrics ({selectedMetricLabels.length}/5)</span>
+              </div>
+
+              <div className="trust-metrics-scroll">
+                {trustMetrics.map(({ label, description, weight, value }) => {
+                  const isSelected = selectedMetricLabels.includes(label);
+                  return (
+                    <div key={label} className={`trust-metric ${!isSelected ? 'disabled-metric' : ''}`}>
+                      <div className="metric-select-row">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleMetricSelection(label)}
+                          className="metric-checkbox"
+                          id={`metric-check-${label.replace(/\s+/g, '-')}`}
+                        />
+                        <label htmlFor={`metric-check-${label.replace(/\s+/g, '-')}`} className="metric-meta-wrapper">
+                          <div className="metric-meta">
+                            <div>
+                              <span className="metric-label">{label}</span>
+                              {description && <p className="metric-desc">{description}</p>}
+                            </div>
+                            <span className="metric-value">{Math.round(value)}%</span>
+                          </div>
+                        </label>
+                      </div>
+
+                      {isSelected && (
+                        <>
+                          <div className="metric-scale">
+                            <div className="metric-fill" style={{ width: `${value}%` }} />
+                          </div>
+                          <div className="metric-weight">Weight: {weight}%</div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
+    );
+  };
 
   const renderAuthView = () => (
     <div className={`page-shell auth-shell ${theme}`} data-theme={theme}>
