@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.security import hash_password
 from app.routes.chat import router as chat_router
+from app.routes.analysis import router as analysis_router
 
 app = FastAPI(
     title="XAI",
@@ -18,6 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(chat_router, prefix="/api")
+app.include_router(analysis_router, prefix="/api")
 
 @app.get('/health')
 def working():

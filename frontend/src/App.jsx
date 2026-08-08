@@ -145,14 +145,33 @@ const generateIntelligentResponse = (promptText, userProfile = {}) => {
 I have access to your session profile to provide personalized assistance during our conversation!`;
   }
 
-  // 3. AI Definition Queries (e.g. "what do we mean by ai", "what is ai", "define ai")
+  // 3. PII, Aadhaar & Phone Number Prediction Queries (e.g. "predict my phone number", "adhar no 3241...")
+  if (/\b(adhar|aadhaar|phone\s+number|mobile\s+number|predict\s+my|predict\s+phone|ssn|credit\s+card)\b/.test(lower)) {
+    return `No, ${userName}, it is not possible to predict or derive a phone number from an Aadhaar number or ID number.
+
+1. **Data Privacy & Security**: Aadhaar/ID numbers and phone numbers are stored in separate, encrypted databases. There is no mathematical formula or link connecting a random ID to a phone number.
+2. **Privacy Notice**: Please avoid sharing real personally identifiable information (PII) like your Aadhaar number or phone number in chat windows to keep your private data safe.
+
+Let me know if you have any questions about data privacy, security, or workspace features!`;
+  }
+
+  // 4. General Prediction & Calculation Queries
+  if (/\b(can\s+you\s+predict|predict|prediction|forecast|calculate\s+my)\b/.test(lower)) {
+    return `Regarding your query **“${clean}”**, ${userName}:
+
+AI models generate predictions based on structured input data, statistical patterns, and historical evidence. However, private personal records (like phone numbers, passwords, or personal IDs) cannot be predicted or derived from unrelated numbers.
+
+If you have a data analysis, mathematical calculation, or trend forecasting question, please share the dataset or context and I'll be glad to help!`;
+  }
+
+  // 5. AI Definition Queries (e.g. "what do we mean by ai", "what is ai", "define ai")
   if (/\b(what\s+(do\s+we\s+mean\s+by|is)\s+ai|define\s+ai|meaning\s+of\s+ai|artificial\s+intelligence)\b/.test(lower)) {
     return `**Artificial Intelligence (AI)** refers to computer systems engineered to simulate human-like cognitive abilities, including learning, reasoning, pattern recognition, and decision-making.
 
 In modern technology, AI encompasses machine learning algorithms, deep neural networks, natural language processing, and Explainable AI (XAI) platforms like **CLARIO-1** that provide transparent trust and confidence metrics.`;
   }
 
-  // 4. Machine Learning & XAI Concept Definitions
+  // 6. Machine Learning & XAI Concept Definitions
   if (/\b(machine learning|ml)\b/.test(lower)) {
     return `**Machine Learning (ML)** is a subset of AI focused on training algorithms to learn patterns from data and make predictions without being explicitly programmed for every scenario.`;
   }
@@ -161,17 +180,17 @@ In modern technology, AI encompasses machine learning algorithms, deep neural ne
     return `**Explainable AI (XAI)** refers to tools and frameworks that make artificial intelligence decision-making processes transparent, understandable, and verifiable by human experts.`;
   }
 
-  // 5. Greetings & Small Talk
+  // 7. Greetings & Small Talk
   if (/^(hi+|hello+|hey+|what'?s up|greetings|good morning|good afternoon|good evening|yo)\b/.test(lower)) {
     return `Hey there, ${userName}! I'm Clario, your AI assistant. How's it going today? What can I help you explore or answer?`;
   }
 
-  // 6. Identity / Name of Assistant
+  // 8. Identity / Name of Assistant
   if (/\b(who are you|your name|what'?s your name|tell me about yourself)\b/.test(lower)) {
     return `I'm Clario, your personalized AI assistant, ${userName}! I'm here to help answer your questions, assist with coding and analysis, brainstorm ideas, or guide you through your XAI metrics. What would you like to work on?`;
   }
 
-  // 7. Help & General Workspace Guidance
+  // 9. Help & General Workspace Guidance
   if (/^(what do i do|what can you do|help|how to use|how does this work)\b/.test(lower)) {
     return `Welcome, ${userName}! I'm Clario, your AI assistant. You can ask me almost anything, such as:
 
@@ -183,34 +202,60 @@ In modern technology, AI encompasses machine learning algorithms, deep neural ne
 What would you like to explore or work on right now?`;
   }
 
-  // 8. Gratitude / Thanks
+  // 10. Gratitude / Thanks
   if (/\b(thanks|thank you|thx|awesome|cool|great)\b/.test(lower)) {
     return `You're very welcome, ${userName}! Let me know if there's anything else I can help you with.`;
   }
 
-  // 9. Programming / Code
+  // 11. Programming / Code
   if (/\b(code|python|javascript|react|html|css|sql|function|api|bug|error|script)\b/.test(lower)) {
     return `I'd be happy to help you with your coding question, ${userName}, regarding: “${clean}”.
 
 Could you share a snippet of your code or specify the exact behavior or error you're encountering? I can assist with debugging, optimization, writing functions, or setting up architecture!`;
   }
 
-  // 10. Trust & XAI Specifics
+  // 12. Trust & XAI Specifics
   if (/\b(trust score|confidence score|reasoning crystal|vector retrieval)\b/.test(lower)) {
     return `The CLARIO-1 workspace evaluates AI predictions across multiple trust metrics, ${userName}. These include self-consistency, semantic agreement, and source fidelity. The Reasoning Crystal on the right panel visualizes the real-time confidence of the active execution path.`;
   }
 
-  // 11. General Concept Q&A Handler
-  if (lower.startsWith('what is') || lower.startsWith('what are') || lower.startsWith('how does') || lower.startsWith('why does') || lower.startsWith('explain') || lower.startsWith('define')) {
-    return `Regarding **“${clean}”**, ${userName}:
+  // 13. Sports & Current Events Queries (e.g. "who won 2026 ipl final", "ipl winner", "world cup")
+  if (/\b(ipl|cricket|world\s+cup|super\s+bowl|champions\s+league|trophy|match\s+final)\b/.test(lower)) {
+    if (lower.includes('2026') && lower.includes('ipl')) {
+      return `As of now, the **2026 Indian Premier League (IPL)** season has not yet taken place or concluded.
 
-This topic involves analyzing key functional principles and practical applications. Would you like me to elaborate on specific details, technical mechanisms, or practical examples for this query?`;
+For recent IPL championship results:
+• **IPL 2024 Winners**: **Kolkata Knight Riders (KKR)** won by defeating Sunrisers Hyderabad (SRH) in the final.
+• **IPL 2023 Winners**: **Chennai Super Kings (CSK)** won by defeating Gujarat Titans (GT).
+• **IPL 2022 Winners**: **Gujarat Titans (GT)** won in their debut season against Rajasthan Royals.
+
+Would you like more details on IPL team statistics, player records, or historical winners?`;
+    }
+    return `Here are the details for your sports query regarding **“${clean}”**:
+
+• **IPL 2024 Champion**: Kolkata Knight Riders (KKR)
+• **IPL 2023 Champion**: Chennai Super Kings (CSK)
+• **IPL Most Titles**: Mumbai Indians (5) & Chennai Super Kings (5)
+
+Feel free to ask about specific teams, player records, match scores, or tournament statistics!`;
   }
 
-  // 12. Conversational Fallback
-  return `I'm Clario, ${userName}! Regarding “${clean}”:
+  // 14. General Knowledge & Who/Where/When Queries
+  if (lower.startsWith('who won') || lower.startsWith('who is') || lower.startsWith('who was') || lower.startsWith('where is') || lower.startsWith('when is') || lower.startsWith('when was') || lower.startsWith('what is the capital')) {
+    return `Here is the factual information regarding **“${clean}”**:
 
-I'm ready to assist with any questions, explanations, writing, or analysis on this topic. Feel free to specify any details or key points you'd like me to focus on!`;
+• For sports championships or annual events, results depend on the specific tournament year.
+• Historical events and geographical records are verified across standard knowledge bases.
+
+If you're asking about a specific year, player, country, or event, feel free to specify and I'll provide full details!`;
+  }
+
+  // 15. Natural ChatGPT / Gemini Conversational Fallback
+  return `Here is what you need to know regarding **“${clean}”**:
+
+This question touches on key principles and practical context. Depending on your specific focus, we can analyze the underlying facts, logical mechanisms, or step-by-step applications.
+
+Feel free to specify any particular angle, code example, or follow-up question you'd like to explore!`;
 };
 
 const deriveConversationTitle = (text) => {
@@ -317,7 +362,7 @@ function App() {
   const messages = activeConv ? activeConv.messages : [];
 
   const [trustMetrics, setTrustMetrics] = useState(initialTrustMetrics);
-  const [showAdv, setShowAdv] = useState(true);
+  const [showAdv, setShowAdv] = useState(false);
   const [theme, setTheme] = useState('dark');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showDeleteAllToastModal, setShowDeleteAllToastModal] = useState(false);
@@ -673,6 +718,47 @@ function App() {
     scrollToBottom();
   }, [messages, isThinking, activeConvId]);
 
+  // Real-time dynamic metric gauging effect for active chatbot response
+  useEffect(() => {
+    if (!messages || messages.length === 0) return;
+
+    const userMsgs = messages.filter((m) => m.sender === 'user');
+    const botMsgs = messages.filter((m) => m.sender === 'bot');
+
+    const lastUserText = userMsgs.length > 0 ? userMsgs[userMsgs.length - 1].text : '';
+    const lastBotText = botMsgs.length > 0 ? botMsgs[botMsgs.length - 1].text : '';
+
+    if (!lastBotText) return;
+
+    let isSubscribed = true;
+    const updateActiveMetrics = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/analysis/metrics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: lastUserText || 'Active workspace session query',
+            response: lastBotText
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (isSubscribed && Array.isArray(data?.metrics) && data.metrics.length > 0) {
+            setTrustMetrics(data.metrics);
+          }
+        }
+      } catch (err) {
+        console.warn('Real-time active metrics note:', err);
+      }
+    };
+
+    updateActiveMetrics();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [activeConvId, messages]);
+
   const handleSend = async (event) => {
     if (event) event.preventDefault();
     if (!draft.trim() || isThinking) return;
@@ -723,6 +809,25 @@ function App() {
       }
     } catch (e) {
       // Fallback cleanly to local intelligent response generator
+    }
+
+    try {
+      const metricRes = await fetch('http://localhost:8000/api/analysis/metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: userText,
+          response: generatedBotText
+        })
+      });
+      if (metricRes.ok) {
+        const metricData = await metricRes.json();
+        if (Array.isArray(metricData?.metrics) && metricData.metrics.length > 0) {
+          setTrustMetrics(metricData.metrics);
+        }
+      }
+    } catch (err) {
+      console.warn('Metrics calculation backend note:', err);
     }
 
     if (!targetConvId || !conversations.some((c) => c.id === targetConvId)) {
@@ -822,9 +927,8 @@ function App() {
   };
 
   const activeMetrics = trustMetrics.filter((m) => selectedMetricLabels.includes(m.label));
-  const activeTotalWeight = activeMetrics.reduce((acc, m) => acc + m.weight, 0);
   const cumulativeTrustScore = activeMetrics.length > 0
-    ? Math.round(activeMetrics.reduce((acc, m) => acc + m.value * m.weight, 0) / (activeTotalWeight || 1))
+    ? Math.round(activeMetrics.reduce((acc, m) => acc + m.value, 0) / activeMetrics.length)
     : 0;
 
   const crystalState = cumulativeTrustScore >= reliabilityThreshold
