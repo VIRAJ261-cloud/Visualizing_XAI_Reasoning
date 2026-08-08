@@ -2361,3 +2361,89 @@ input:focus {
   padding: 4px;
   margin-left: 8px;
 }
+
+/* Markdown Formatted Elements inside Chat Bubbles */
+.markdown-paragraph {
+  margin: 0 0 8px 0;
+  line-height: 1.55;
+  font-size: 0.94rem;
+}
+
+.markdown-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-paragraph strong {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.markdown-paragraph em {
+  font-style: italic;
+  opacity: 0.95;
+}
+
+.markdown-inline-code {
+  background: rgba(67, 161, 255, 0.15);
+  border: 1px solid rgba(67, 161, 255, 0.3);
+  color: var(--accent-cyan);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.85em;
+}
+
+.markdown-code-block {
+  background: var(--inner-card-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #a5f3fc;
+  overflow-x: auto;
+  margin: 10px 0;
+  white-space: pre-wrap;
+}
+
+.markdown-h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 10px 0 4px 0;
+}
+
+.markdown-h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin: 8px 0 4px 0;
+}
+
+.markdown-bullet-line {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.markdown-bullet {
+  color: var(--accent-cyan);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.markdown-numbered-line {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.markdown-number {
+  color: var(--accent-cyan);
+  font-weight: 700;
+  flex-shrink: 0;
+}

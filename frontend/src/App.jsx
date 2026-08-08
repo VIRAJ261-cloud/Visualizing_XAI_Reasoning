@@ -9,27 +9,171 @@ const initialTrustMetrics = [
   { label: 'External verification', description: 'Cross-validation against ground truth facts', weight: 10, value: 59 }
 ];
 
-const generateIntelligentResponse = (promptText) => {
+const parseInlineMarkdown = (text) => {
+  if (!text) return text;
+
+  const parts = [];
+  let remaining = text;
+  let keyIndex = 0;
+
+  while (remaining.length > 0) {
+    // Bold: **text** or __text__
+    const boldMatch = remaining.match(/^(\*\*|__)(.*?)\1/);
+    if (boldMatch) {
+      parts.push(<strong key={keyIndex++}>{boldMatch[2]}</strong>);
+      remaining = remaining.slice(boldMatch[0].length);
+      continue;
+    }
+
+    // Inline Code: `text`
+    const codeMatch = remaining.match(/^`([^`]+)`/);
+    if (codeMatch) {
+      parts.push(<code key={keyIndex++} className="markdown-inline-code">{codeMatch[1]}</code>);
+      remaining = remaining.slice(codeMatch[0].length);
+      continue;
+    }
+
+    // Italic: *text* or _text_
+    const italicMatch = remaining.match(/^(\*|_)(.*?)\1/);
+    if (italicMatch) {
+      parts.push(<em key={keyIndex++}>{italicMatch[2]}</em>);
+      remaining = remaining.slice(italicMatch[0].length);
+      continue;
+    }
+
+    // Regular text up to next special character
+    const nextSpecial = remaining.search(/[\*_`]/);
+    if (nextSpecial === -1) {
+      parts.push(remaining);
+      break;
+    } else if (nextSpecial === 0) {
+      parts.push(remaining[0]);
+      remaining = remaining.slice(1);
+    } else {
+      parts.push(remaining.slice(0, nextSpecial));
+      remaining = remaining.slice(nextSpecial);
+    }
+  }
+
+  return parts;
+};
+
+const renderFormattedMarkdown = (content) => {
+  if (!content) return null;
+
+  const blocks = content.split(/\n\n+/);
+
+  return blocks.map((block, blockIdx) => {
+    const lines = block.split('\n');
+
+    if (block.startsWith('```') && block.endsWith('```')) {
+      const codeText = block.slice(3, -3).replace(/^[a-z]+\n/, '');
+      return (
+        <pre key={blockIdx} className="markdown-code-block">
+          <code>{codeText}</code>
+        </pre>
+      );
+    }
+
+    const formattedLines = lines.map((line, lineIdx) => {
+      if (line.startsWith('### ')) {
+        return <h5 key={lineIdx} className="markdown-h3">{parseInlineMarkdown(line.slice(4))}</h5>;
+      }
+      if (line.startsWith('## ') || line.startsWith('# ')) {
+        return <h4 key={lineIdx} className="markdown-h2">{parseInlineMarkdown(line.replace(/^#+\s*/, ''))}</h4>;
+      }
+
+      if (/^[\u2022\-\*]\s+/.test(line)) {
+        const itemText = line.replace(/^[\u2022\-\*]\s+/, '');
+        return (
+          <div key={lineIdx} className="markdown-bullet-line">
+            <span className="markdown-bullet">•</span>
+            <span>{parseInlineMarkdown(itemText)}</span>
+          </div>
+        );
+      }
+
+      if (/^\d+\.\s+/.test(line)) {
+        const match = line.match(/^(\d+)\.\s+(.*)$/);
+        return (
+          <div key={lineIdx} className="markdown-numbered-line">
+            <span className="markdown-number">{match[1]}.</span>
+            <span>{parseInlineMarkdown(match[2])}</span>
+          </div>
+        );
+      }
+
+      return (
+        <span key={lineIdx}>
+          {parseInlineMarkdown(line)}
+          {lineIdx < lines.length - 1 && <br />}
+        </span>
+      );
+    });
+
+    return (
+      <div key={blockIdx} className="markdown-paragraph">
+        {formattedLines}
+      </div>
+    );
+  });
+};
+
+const generateIntelligentResponse = (promptText, userProfile = {}) => {
   const clean = promptText ? promptText.trim() : '';
   const lower = clean.toLowerCase();
+  const userName = userProfile.name && userProfile.name.trim() ? userProfile.name.trim() : 'Analyst';
 
   if (!clean) {
-    return "Hello! I'm Clario. Feel free to ask me anything!";
+    return `Hello ${userName}! I'm Clario. Feel free to ask me anything!`;
   }
 
-  // 1. Greetings & Small Talk
+  // 1. User Name Queries (e.g. "What is my name", "what is mmy name", "my name")
+  if (/\b(what\s+is\s+m*y\s+name|what'?s\s+m*y\s+name|do\s+you\s+know\s+my\s+name|tell\s+me\s+my\s+name)\b/.test(lower)) {
+    const emailStr = userProfile.email ? ` (${userProfile.email})` : '';
+    return `Your name is **${userName}**! You are signed in as ${userName}${emailStr} on the ${userProfile.plan || 'Enterprise XAI Pro'} plan.`;
+  }
+
+  // 2. Account & Profile Queries
+  if (/\b(who am i|my profile|my account|my role|my details|my plan|user profile)\b/.test(lower)) {
+    const emailStr = userProfile.email ? ` (${userProfile.email})` : '';
+    return `You are currently signed in as **${userName}**${emailStr}.
+
+• **Workspace Role:** ${userProfile.role || 'Verified XAI Analyst'}
+• **Workspace Plan:** ${userProfile.plan || 'Enterprise XAI Pro'}
+
+I have access to your session profile to provide personalized assistance during our conversation!`;
+  }
+
+  // 3. AI Definition Queries (e.g. "what do we mean by ai", "what is ai", "define ai")
+  if (/\b(what\s+(do\s+we\s+mean\s+by|is)\s+ai|define\s+ai|meaning\s+of\s+ai|artificial\s+intelligence)\b/.test(lower)) {
+    return `**Artificial Intelligence (AI)** refers to computer systems engineered to simulate human-like cognitive abilities, including learning, reasoning, pattern recognition, and decision-making.
+
+In modern technology, AI encompasses machine learning algorithms, deep neural networks, natural language processing, and Explainable AI (XAI) platforms like **CLARIO-1** that provide transparent trust and confidence metrics.`;
+  }
+
+  // 4. Machine Learning & XAI Concept Definitions
+  if (/\b(machine learning|ml)\b/.test(lower)) {
+    return `**Machine Learning (ML)** is a subset of AI focused on training algorithms to learn patterns from data and make predictions without being explicitly programmed for every scenario.`;
+  }
+
+  if (/\b(explainable ai|xai)\b/.test(lower)) {
+    return `**Explainable AI (XAI)** refers to tools and frameworks that make artificial intelligence decision-making processes transparent, understandable, and verifiable by human experts.`;
+  }
+
+  // 5. Greetings & Small Talk
   if (/^(hi+|hello+|hey+|what'?s up|greetings|good morning|good afternoon|good evening|yo)\b/.test(lower)) {
-    return "Hey there! I'm Clario, your AI assistant. How's it going? What can I help you with today?";
+    return `Hey there, ${userName}! I'm Clario, your AI assistant. How's it going today? What can I help you explore or answer?`;
   }
 
-  // 2. Identity / Name
+  // 6. Identity / Name of Assistant
   if (/\b(who are you|your name|what'?s your name|tell me about yourself)\b/.test(lower)) {
-    return "I'm Clario, a versatile AI assistant! I'm here to help answer your questions, assist with coding and analysis, brainstorm ideas, or guide you through your workspace. What would you like to work on?";
+    return `I'm Clario, your personalized AI assistant, ${userName}! I'm here to help answer your questions, assist with coding and analysis, brainstorm ideas, or guide you through your XAI metrics. What would you like to work on?`;
   }
 
-  // 3. Help & General Workspace Guidance
+  // 7. Help & General Workspace Guidance
   if (/^(what do i do|what can you do|help|how to use|how does this work)\b/.test(lower)) {
-    return `I'm Clario, your AI assistant! You can ask me almost anything, such as:
+    return `Welcome, ${userName}! I'm Clario, your AI assistant. You can ask me almost anything, such as:
 
 • General knowledge and Q&A (just like ChatGPT or Gemini)
 • Coding, debugging, and data analysis
@@ -39,25 +183,32 @@ const generateIntelligentResponse = (promptText) => {
 What would you like to explore or work on right now?`;
   }
 
-  // 4. Gratitude / Thanks
+  // 8. Gratitude / Thanks
   if (/\b(thanks|thank you|thx|awesome|cool|great)\b/.test(lower)) {
-    return "You're very welcome! Let me know if there's anything else I can help you with.";
+    return `You're very welcome, ${userName}! Let me know if there's anything else I can help you with.`;
   }
 
-  // 5. Programming / Code
+  // 9. Programming / Code
   if (/\b(code|python|javascript|react|html|css|sql|function|api|bug|error|script)\b/.test(lower)) {
-    return `I'd be happy to help with your coding question regarding: “${clean}”.
+    return `I'd be happy to help you with your coding question, ${userName}, regarding: “${clean}”.
 
 Could you share a snippet of your code or specify the exact behavior or error you're encountering? I can assist with debugging, optimization, writing functions, or setting up architecture!`;
   }
 
-  // 6. Trust & XAI Specifics (Natural Response)
-  if (/\b(trust score|confidence score|reasoning crystal|vector retrieval|xai)\b/.test(lower)) {
-    return "The CLARIO-1 workspace evaluates AI predictions across multiple trust metrics, including self-consistency, semantic agreement, and source fidelity. The Reasoning Crystal on the right panel visualizes the real-time confidence of the active execution path.";
+  // 10. Trust & XAI Specifics
+  if (/\b(trust score|confidence score|reasoning crystal|vector retrieval)\b/.test(lower)) {
+    return `The CLARIO-1 workspace evaluates AI predictions across multiple trust metrics, ${userName}. These include self-consistency, semantic agreement, and source fidelity. The Reasoning Crystal on the right panel visualizes the real-time confidence of the active execution path.`;
   }
 
-  // 7. General Conversational Fallback (Normal AI behavior like ChatGPT / Gemini)
-  return `I'm Clario! Regarding your prompt “${clean}”:
+  // 11. General Concept Q&A Handler
+  if (lower.startsWith('what is') || lower.startsWith('what are') || lower.startsWith('how does') || lower.startsWith('why does') || lower.startsWith('explain') || lower.startsWith('define')) {
+    return `Regarding **“${clean}”**, ${userName}:
+
+This topic involves analyzing key functional principles and practical applications. Would you like me to elaborate on specific details, technical mechanisms, or practical examples for this query?`;
+  }
+
+  // 12. Conversational Fallback
+  return `I'm Clario, ${userName}! Regarding “${clean}”:
 
 I'm ready to assist with any questions, explanations, writing, or analysis on this topic. Feel free to specify any details or key points you'd like me to focus on!`;
 };
@@ -537,7 +688,14 @@ function App() {
     let targetConvId = activeConvId;
     let targetTitle = '';
 
-    let generatedBotText = generateIntelligentResponse(userText);
+    const userProfile = {
+      name: formData.name || 'Alicia Chen',
+      email: formData.email || 'alicia.chen@clario.ai',
+      role: 'Verified XAI Analyst',
+      plan: 'Enterprise XAI Pro'
+    };
+
+    let generatedBotText = generateIntelligentResponse(userText, userProfile);
 
     try {
       const controller = new AbortController();
@@ -548,7 +706,11 @@ function App() {
         body: JSON.stringify({
           user_id: session?.user?.id || 'demo-user',
           text: userText,
-          topic: targetTitle || 'Trust Analysis'
+          topic: targetTitle || 'Trust Analysis',
+          user_name: userProfile.name,
+          user_email: userProfile.email,
+          user_role: userProfile.role,
+          workspace_plan: userProfile.plan
         }),
         signal: controller.signal
       });
@@ -1110,14 +1272,6 @@ function App() {
             {conversations.length > 0 && (
               <div className="chat-top-actions">
                 <span className="chat-msg-count">{conversations.length} conversation{conversations.length > 1 ? 's' : ''} in workspace</span>
-                <button
-                  type="button"
-                  className="clear-chat-btn"
-                  onClick={requestDeleteAllChat}
-                  title="Delete all chat history across workspace with password verification"
-                >
-                  🗑️ Delete All Chat
-                </button>
               </div>
             )}
 
@@ -1159,7 +1313,7 @@ function App() {
                 <>
                   {messages.map((message) => (
                     <div key={message.id} className={`bubble ${message.sender}`}>
-                      <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p>
+                      {renderFormattedMarkdown(message.text)}
                     </div>
                   ))}
                   {isThinking && (
