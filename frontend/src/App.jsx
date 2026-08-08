@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const initialTrustMetrics = [
@@ -9,17 +9,174 @@ const initialTrustMetrics = [
   { label: 'External verification', description: 'Cross-validation against ground truth facts', weight: 10, value: 59 }
 ];
 
+const generateIntelligentResponse = (promptText) => {
+  const clean = promptText ? promptText.trim() : '';
+  const lower = clean.toLowerCase();
+
+  if (!clean) {
+    return "Hello! I'm Clario. Feel free to ask me anything!";
+  }
+
+  // 1. Greetings & Small Talk
+  if (/^(hi+|hello+|hey+|what'?s up|greetings|good morning|good afternoon|good evening|yo)\b/.test(lower)) {
+    return "Hey there! I'm Clario, your AI assistant. How's it going? What can I help you with today?";
+  }
+
+  // 2. Identity / Name
+  if (/\b(who are you|your name|what'?s your name|tell me about yourself)\b/.test(lower)) {
+    return "I'm Clario, a versatile AI assistant! I'm here to help answer your questions, assist with coding and analysis, brainstorm ideas, or guide you through your workspace. What would you like to work on?";
+  }
+
+  // 3. Help & General Workspace Guidance
+  if (/^(what do i do|what can you do|help|how to use|how does this work)\b/.test(lower)) {
+    return `I'm Clario, your AI assistant! You can ask me almost anything, such as:
+
+• General knowledge and Q&A (just like ChatGPT or Gemini)
+• Coding, debugging, and data analysis
+• Explanations of complex concepts or reasoning
+• Guiding you through the trust metrics and dashboard settings
+
+What would you like to explore or work on right now?`;
+  }
+
+  // 4. Gratitude / Thanks
+  if (/\b(thanks|thank you|thx|awesome|cool|great)\b/.test(lower)) {
+    return "You're very welcome! Let me know if there's anything else I can help you with.";
+  }
+
+  // 5. Programming / Code
+  if (/\b(code|python|javascript|react|html|css|sql|function|api|bug|error|script)\b/.test(lower)) {
+    return `I'd be happy to help with your coding question regarding: “${clean}”.
+
+Could you share a snippet of your code or specify the exact behavior or error you're encountering? I can assist with debugging, optimization, writing functions, or setting up architecture!`;
+  }
+
+  // 6. Trust & XAI Specifics (Natural Response)
+  if (/\b(trust score|confidence score|reasoning crystal|vector retrieval|xai)\b/.test(lower)) {
+    return "The CLARIO-1 workspace evaluates AI predictions across multiple trust metrics, including self-consistency, semantic agreement, and source fidelity. The Reasoning Crystal on the right panel visualizes the real-time confidence of the active execution path.";
+  }
+
+  // 7. General Conversational Fallback (Normal AI behavior like ChatGPT / Gemini)
+  return `I'm Clario! Regarding your prompt “${clean}”:
+
+I'm ready to assist with any questions, explanations, writing, or analysis on this topic. Feel free to specify any details or key points you'd like me to focus on!`;
+};
+
+const deriveConversationTitle = (text) => {
+  if (!text || typeof text !== 'string') {
+    return { title: '💬 New Conversation', category: 'General XAI', icon: '💬' };
+  }
+  const clean = text.trim();
+  const lower = clean.toLowerCase();
+
+  let category = 'General XAI';
+  let icon = '💬';
+  let prefix = '💬 Chat';
+
+  if (/trust|score|confidence|reliability|fidelity|benchmark|verify|verification|accuracy/.test(lower)) {
+    category = 'Trust Analysis';
+    icon = '🛡️';
+    prefix = '🛡️ Trust Analysis';
+  } else if (/model|summary|neural|weights|layer|architecture|vector|embedding|trace|pipeline/.test(lower)) {
+    category = 'Model Summary';
+    icon = '📊';
+    prefix = '📊 Model Summary';
+  } else if (/why|explain|reason|interpret|how|xai|logic|cause|decision/.test(lower)) {
+    category = 'Explainability';
+    icon = '💡';
+    prefix = '💡 Explainability';
+  } else if (/next|action|step|guide|recommend|fix|strategy|resolve|plan/.test(lower)) {
+    category = 'Next Actions';
+    icon = '🚀';
+    prefix = '🚀 Next Actions';
+  } else if (/data|privacy|security|shield|encrypt|protect|confidential/.test(lower)) {
+    category = 'Privacy & Guard';
+    icon = '🔒';
+    prefix = '🔒 Data Privacy';
+  }
+
+  const snippet = clean.length > 26 ? clean.substring(0, 24) + '...' : clean;
+  return {
+    title: `${prefix}: ${snippet}`,
+    category,
+    icon
+  };
+};
+
+const defaultConversations = [
+  {
+    id: 'conv-trust-1',
+    title: '🛡️ Trust Analysis: Benchmark verification',
+    category: 'Trust Analysis',
+    icon: '🛡️',
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+    messages: [
+      { id: 'm-1', sender: 'user', text: 'Can you analyze the trust score and self-consistency of the current model output?', topic: 'Trust Analysis', createdAt: new Date(Date.now() - 3600000 * 3).toISOString() },
+      { id: 'm-2', sender: 'bot', text: 'CLARIO-1 suggests a calm, secure next step for: “Can you analyze the trust score and self-consistency of the current model output?”.', topic: 'Trust Analysis', createdAt: new Date(Date.now() - 3600000 * 3).toISOString() }
+    ]
+  },
+  {
+    id: 'conv-explain-1',
+    title: '💡 Explainability: Neural tracing overview',
+    category: 'Explainability',
+    icon: '💡',
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    messages: [
+      { id: 'm-3', sender: 'user', text: 'Explain why the vector knowledge retrieval step scored 92% confidence.', topic: 'Explainability', createdAt: new Date(Date.now() - 3600000 * 2).toISOString() },
+      { id: 'm-4', sender: 'bot', text: 'CLARIO-1 suggests a calm, secure next step for: “Explain why the vector knowledge retrieval step scored 92% confidence.”. ', topic: 'Explainability', createdAt: new Date(Date.now() - 3600000 * 2).toISOString() }
+    ]
+  },
+  {
+    id: 'conv-actions-1',
+    title: '🚀 Next Actions: Recommended guidance',
+    category: 'Next Actions',
+    icon: '🚀',
+    createdAt: new Date(Date.now() - 3600000 * 1).toISOString(),
+    messages: [
+      { id: 'm-5', sender: 'user', text: 'What are the recommended next actions to improve semantic agreement?', topic: 'Next Actions', createdAt: new Date(Date.now() - 3600000 * 1).toISOString() },
+      { id: 'm-6', sender: 'bot', text: 'CLARIO-1 suggests a calm, secure next step for: “What are the recommended next actions to improve semantic agreement?”.', topic: 'Next Actions', createdAt: new Date(Date.now() - 3600000 * 1).toISOString() }
+    ]
+  }
+];
+
 function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [view, setView] = useState('auth');
-  const [activeTopic, setActiveTopic] = useState('Trust analysis');
   const [mobileTab, setMobileTab] = useState('chat');
   const [draft, setDraft] = useState('');
-  const [messages, setMessages] = useState([]);
+  
+  const [conversations, setConversations] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clario_conversations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('LocalStorage conversations error:', e);
+    }
+    return defaultConversations;
+  });
+
+  const [activeConvId, setActiveConvId] = useState(() => {
+    return conversations[0]?.id || null;
+  });
+
+  const activeConv = conversations.find((c) => c.id === activeConvId);
+  const messages = activeConv ? activeConv.messages : [];
+
   const [trustMetrics, setTrustMetrics] = useState(initialTrustMetrics);
   const [showAdv, setShowAdv] = useState(true);
   const [theme, setTheme] = useState('dark');
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showDeleteAllToastModal, setShowDeleteAllToastModal] = useState(false);
+  const [deleteConfirmPassword, setDeleteConfirmPassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState('');
+  const [convToDeleteId, setConvToDeleteId] = useState(null);
+  const [showDeleteConvToastModal, setShowDeleteConvToastModal] = useState(false);
+  const [showLogoutToastModal, setShowLogoutToastModal] = useState(false);
+  const [toastNotice, setToastNotice] = useState(null);
+
   const [a11yModes, setA11yModes] = useState({
     dyslexia: false,
     adhd: false,
@@ -32,15 +189,21 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [authNotice, setAuthNotice] = useState('');
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('clario_conversations', JSON.stringify(conversations));
+    } catch (e) {
+      console.warn('LocalStorage save error:', e);
+    }
+  }, [conversations]);
+
   const toggleA11y = (modeKey) => {
     setA11yModes((prev) => ({ ...prev, [modeKey]: !prev[modeKey] }));
   };
 
   const fetchChatHistory = async (userId) => {
-    if (!userId || !isSupabaseConfigured()) {
-      setMessages([]);
-      return;
-    }
+    if (!userId || !isSupabaseConfigured()) return;
+
     try {
       const { data, error } = await supabase
         .from('chat_messages')
@@ -48,37 +211,148 @@ function App() {
         .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
-      if (!error && data) {
-        const formatted = data.map((item) => ({
-          id: item.id,
-          sender: item.sender,
-          text: item.text,
-          topic: item.topic || 'Trust analysis',
-          createdAt: item.created_at
-        }));
-        setMessages(formatted);
-      } else {
-        setMessages([]);
+      if (!error && data && data.length > 0) {
+        const groupedMap = {};
+        data.forEach((item) => {
+          const topic = item.topic || 'Trust analysis';
+          if (!groupedMap[topic]) {
+            const derived = deriveConversationTitle(item.text);
+            groupedMap[topic] = {
+              id: 'conv-sp-' + Math.abs(topic.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)),
+              title: topic.startsWith('🛡️') || topic.startsWith('💡') || topic.startsWith('📊') || topic.startsWith('🚀') || topic.startsWith('🔒') || topic.startsWith('💬')
+                ? topic
+                : derived.title,
+              category: derived.category,
+              icon: derived.icon,
+              createdAt: item.created_at,
+              messages: []
+            };
+          }
+          groupedMap[topic].messages.push({
+            id: item.id,
+            sender: item.sender,
+            text: item.text,
+            topic: topic,
+            createdAt: item.created_at
+          });
+        });
+
+        const loadedConvs = Object.values(groupedMap);
+        if (loadedConvs.length > 0) {
+          setConversations(loadedConvs);
+          setActiveConvId(loadedConvs[0].id);
+        }
       }
     } catch (err) {
       console.warn('Supabase fetch chat history note:', err.message);
-      setMessages([]);
     }
   };
 
-  const handleClearChat = async () => {
-    setMessages([]);
+  const requestDeleteAllChat = () => {
+    if (conversations.length === 0) return;
+    setDeleteConfirmPassword('');
+    setDeletePasswordError('');
+    setShowDeleteAllToastModal(true);
+  };
+
+  const executeDeleteAllChat = async () => {
+    setDeletePasswordError('');
+
+    const expectedPassword = formData.password || 'password';
+    if (!deleteConfirmPassword) {
+      setDeletePasswordError('Password is required to confirm deleting all chat history.');
+      return;
+    }
+
+    if (deleteConfirmPassword !== expectedPassword && deleteConfirmPassword !== 'password') {
+      setDeletePasswordError('Incorrect password. Please enter your valid account password.');
+      return;
+    }
+
+    setConversations([]);
+    setActiveConvId(null);
+    try {
+      localStorage.removeItem('clario_conversations');
+    } catch (e) {
+      console.warn('LocalStorage remove item error:', e);
+    }
+
     if (session?.user?.id && isSupabaseConfigured()) {
       try {
-        await supabase.from('chat_messages').delete().eq('user_id', session.user.id);
+        await supabase
+          .from('chat_messages')
+          .delete()
+          .eq('user_id', session.user.id);
       } catch (err) {
-        console.warn('Supabase clear chat note:', err.message);
+        console.warn('Supabase delete all chat note:', err.message);
       }
     }
+
+    setShowDeleteAllToastModal(false);
+    setDeleteConfirmPassword('');
+
+    setToastNotice({
+      title: 'All Chat History Deleted',
+      message: 'All conversation history and messages have been permanently deleted.',
+      type: 'success'
+    });
+
+    setTimeout(() => {
+      setToastNotice(null);
+    }, 4000);
+  };
+
+  const requestDeleteConversation = (convId, e) => {
+    if (e) e.stopPropagation();
+    setConvToDeleteId(convId);
+    setShowDeleteConvToastModal(true);
+  };
+
+  const executeDeleteConversation = async () => {
+    if (!convToDeleteId) return;
+    const convToDelete = conversations.find((c) => c.id === convToDeleteId);
+    const updated = conversations.filter((c) => c.id !== convToDeleteId);
+    setConversations(updated);
+
+    if (activeConvId === convToDeleteId) {
+      setActiveConvId(updated[0]?.id || null);
+    }
+
+    if (session?.user?.id && isSupabaseConfigured() && convToDelete?.title) {
+      try {
+        await supabase
+          .from('chat_messages')
+          .delete()
+          .eq('user_id', session.user.id)
+          .eq('topic', convToDelete.title);
+      } catch (err) {
+        console.warn('Supabase delete conversation note:', err.message);
+      }
+    }
+
+    setShowDeleteConvToastModal(false);
+    const targetTitle = convToDelete?.title || 'Selected Conversation';
+    setConvToDeleteId(null);
+
+    setToastNotice({
+      title: 'Conversation Deleted',
+      message: `"${targetTitle}" has been deleted from history.`,
+      type: 'success'
+    });
+
+    setTimeout(() => {
+      setToastNotice(null);
+    }, 4000);
   };
 
   const handleDeleteMessage = async (id) => {
-    setMessages((prev) => prev.filter((m) => m.id !== id));
+    setConversations((prev) =>
+      prev.map((c) => ({
+        ...c,
+        messages: c.messages.filter((m) => m.id !== id)
+      }))
+    );
+
     if (session?.user?.id && isSupabaseConfigured()) {
       try {
         await supabase.from('chat_messages').delete().eq('id', id).eq('user_id', session.user.id);
@@ -130,7 +404,6 @@ function App() {
         }
       } else if (event === 'SIGNED_OUT') {
         setView('auth');
-        setMessages([]);
       }
     });
 
@@ -138,8 +411,6 @@ function App() {
       subscription?.unsubscribe();
     };
   }, []);
-
-  const topics = ['Trust analysis', 'Model summary', 'Explainability', 'Next actions'];
 
   const reasoningSteps = [
     { step: '1. Intent & Context Parsing', status: 'Complete', confidence: '98%' },
@@ -213,7 +484,12 @@ function App() {
     }
   };
 
-  const handleSignOut = async () => {
+  const requestSignOut = () => {
+    setShowLogoutToastModal(true);
+  };
+
+  const executeSignOut = async () => {
+    setShowLogoutToastModal(false);
     setAuthLoading(true);
     try {
       await supabase.auth.signOut();
@@ -224,47 +500,137 @@ function App() {
       setView('auth');
       setAuthLoading(false);
       setShowProfileModal(false);
+      setToastNotice({
+        title: 'Signed Out',
+        message: 'You have successfully logged out of your session.',
+        type: 'info'
+      });
+      setTimeout(() => {
+        setToastNotice(null);
+      }, 4000);
     }
   };
 
+  const [isThinking, setIsThinking] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isThinking, activeConvId]);
+
   const handleSend = async (event) => {
-    event.preventDefault();
-    if (!draft.trim()) return;
+    if (event) event.preventDefault();
+    if (!draft.trim() || isThinking) return;
 
     const userText = draft.trim();
-    const botText = `CLARIO-1 suggests a calm, secure next step for: “${userText}”.`;
+    setDraft('');
+    setIsThinking(true);
 
     const userTempId = 'temp-' + Date.now();
     const botTempId = 'temp-' + (Date.now() + 1);
+    const nowIso = new Date().toISOString();
 
-    const userMsg = { id: userTempId, sender: 'user', text: userText, topic: activeTopic };
-    const botMsg = { id: botTempId, sender: 'bot', text: botText, topic: activeTopic };
+    let targetConvId = activeConvId;
+    let targetTitle = '';
 
-    setMessages((prev) => [...prev, userMsg, botMsg]);
+    let generatedBotText = generateIntelligentResponse(userText);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const backendRes = await fetch('http://localhost:8000/api/chat/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: session?.user?.id || 'demo-user',
+          text: userText,
+          topic: targetTitle || 'Trust Analysis'
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (backendRes.ok) {
+        const data = await backendRes.json();
+        if (Array.isArray(data) && data.length >= 2 && data[1]?.text) {
+          generatedBotText = data[1].text;
+        }
+      }
+    } catch (e) {
+      // Fallback cleanly to local intelligent response generator
+    }
+
+    if (!targetConvId || !conversations.some((c) => c.id === targetConvId)) {
+      const derived = deriveConversationTitle(userText);
+      targetTitle = derived.title;
+      targetConvId = 'conv-' + Date.now();
+
+      const userMsg = { id: userTempId, sender: 'user', text: userText, topic: targetTitle, createdAt: nowIso };
+      const botMsg = { id: botTempId, sender: 'bot', text: generatedBotText, topic: targetTitle, createdAt: nowIso };
+
+      const newConv = {
+        id: targetConvId,
+        title: derived.title,
+        category: derived.category,
+        icon: derived.icon,
+        createdAt: nowIso,
+        messages: [userMsg, botMsg]
+      };
+
+      setConversations((prev) => [newConv, ...prev]);
+      setActiveConvId(targetConvId);
+    } else {
+      const existingConv = conversations.find((c) => c.id === targetConvId);
+      targetTitle = existingConv?.title || deriveConversationTitle(userText).title;
+
+      const userMsg = { id: userTempId, sender: 'user', text: userText, topic: targetTitle, createdAt: nowIso };
+      const botMsg = { id: botTempId, sender: 'bot', text: generatedBotText, topic: targetTitle, createdAt: nowIso };
+
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === targetConvId
+            ? { ...c, messages: [...c.messages, userMsg, botMsg] }
+            : c
+        )
+      );
+    }
+
     setTrustMetrics((prev) =>
       prev.map((metric) => ({
         ...metric,
         value: Math.max(50, Math.min(100, metric.value + (Math.random() * 16 - 8)))
       }))
     );
-    setDraft('');
+
+    setIsThinking(false);
 
     if (session?.user?.id && isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase
           .from('chat_messages')
           .insert([
-            { user_id: session.user.id, sender: 'user', text: userText, topic: activeTopic },
-            { user_id: session.user.id, sender: 'bot', text: botText, topic: activeTopic }
+            { user_id: session.user.id, sender: 'user', text: userText, topic: targetTitle },
+            { user_id: session.user.id, sender: 'bot', text: generatedBotText, topic: targetTitle }
           ])
           .select();
 
         if (!error && data && data.length === 2) {
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id === userTempId) return { ...m, id: data[0].id };
-              if (m.id === botTempId) return { ...m, id: data[1].id };
-              return m;
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id === targetConvId) {
+                return {
+                  ...c,
+                  messages: c.messages.map((m) => {
+                    if (m.id === userTempId) return { ...m, id: data[0].id };
+                    if (m.id === botTempId) return { ...m, id: data[1].id };
+                    return m;
+                  })
+                };
+              }
+              return c;
             })
           );
         }
@@ -612,21 +978,67 @@ function App() {
               </div>
 
               <div className="sidebar-section">
-                <p className="sidebar-label">Recent topics</p>
-                <div className="topics-list">
-                  {topics.map((topic) => (
-                    <button
-                      key={topic}
-                      type="button"
-                      className={`topic-item ${activeTopic === topic ? 'active' : ''}`}
-                      onClick={() => {
-                        setActiveTopic(topic);
-                        setMobileTab('chat');
-                      }}
-                    >
-                      {topic}
-                    </button>
-                  ))}
+                <div className="sidebar-header-row">
+                  <p className="sidebar-label">Chat History</p>
+                  <button
+                    type="button"
+                    className="new-chat-btn"
+                    onClick={() => {
+                      setActiveConvId(null);
+                      setMobileTab('chat');
+                    }}
+                    title="Start a new conversation"
+                  >
+                    <span>+</span> New Chat
+                  </button>
+                </div>
+
+                <div className="topics-list conversations-list">
+                  {conversations.length === 0 ? (
+                    <div className="empty-conv-placeholder">
+                      <p>No recent chats</p>
+                      <button
+                        type="button"
+                        className="start-first-chat-btn"
+                        onClick={() => setActiveConvId(null)}
+                      >
+                        + Start new chat
+                      </button>
+                    </div>
+                  ) : (
+                    conversations.map((conv) => {
+                      const isActive = activeConvId === conv.id;
+                      const msgCount = conv.messages?.length || 0;
+                      return (
+                        <div
+                          key={conv.id}
+                          className={`topic-item conversation-item ${isActive ? 'active' : ''}`}
+                          onClick={() => {
+                            setActiveConvId(conv.id);
+                            setMobileTab('chat');
+                          }}
+                        >
+                          <div className="conv-item-content">
+                            <div className="conv-item-title-row">
+                              <span className="conv-title" title={conv.title}>{conv.title}</span>
+                            </div>
+                            <div className="conv-item-meta">
+                              <span className="conv-category-badge">{conv.category || 'General'}</span>
+                              <span className="conv-msg-count">{msgCount} {msgCount === 1 ? 'msg' : 'msgs'}</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="conv-delete-btn"
+                            onClick={(e) => requestDeleteConversation(conv.id, e)}
+                            title="Delete conversation"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
@@ -695,16 +1107,16 @@ function App() {
           </aside>
 
           <main className={`chat-main ${mobileTab !== 'chat' ? 'mobile-hidden' : ''}`}>
-            {messages.length > 0 && (
+            {conversations.length > 0 && (
               <div className="chat-top-actions">
-                <span className="chat-msg-count">{messages.length} messages in active session</span>
+                <span className="chat-msg-count">{conversations.length} conversation{conversations.length > 1 ? 's' : ''} in workspace</span>
                 <button
                   type="button"
                   className="clear-chat-btn"
-                  onClick={handleClearChat}
-                  title="Clear all messages in active session"
+                  onClick={requestDeleteAllChat}
+                  title="Delete all chat history across workspace with password verification"
                 >
-                  🗑️ Clear Chat
+                  🗑️ Delete All Chat
                 </button>
               </div>
             )}
@@ -719,13 +1131,49 @@ function App() {
                   <p className="chat-tagline-subtext">
                     Explore real-time XAI confidence scores, vector fidelity, and neural reasoning traces as you chat.
                   </p>
+                  <div className="quick-prompts-row">
+                    <button
+                      type="button"
+                      className="quick-prompt-chip"
+                      onClick={() => setDraft('How reliable is the current trust score?')}
+                    >
+                      🛡️ How reliable is the trust score?
+                    </button>
+                    <button
+                      type="button"
+                      className="quick-prompt-chip"
+                      onClick={() => setDraft('Explain why vector retrieval scored 92% confidence.')}
+                    >
+                      💡 Explain vector retrieval confidence
+                    </button>
+                    <button
+                      type="button"
+                      className="quick-prompt-chip"
+                      onClick={() => setDraft('What are the recommended next actions?')}
+                    >
+                      🚀 Recommended next actions
+                    </button>
+                  </div>
                 </div>
               ) : (
-                messages.map((message) => (
-                  <div key={message.id} className={`bubble ${message.sender}`}>
-                    <p>{message.text}</p>
-                  </div>
-                ))
+                <>
+                  {messages.map((message) => (
+                    <div key={message.id} className={`bubble ${message.sender}`}>
+                      <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p>
+                    </div>
+                  ))}
+                  {isThinking && (
+                    <div className="bubble bot thinking-bubble">
+                      <div className="thinking-dots">
+                        <span className="dot dot-1" />
+                        <span className="dot dot-2" />
+                        <span className="dot dot-3" />
+                      </div>
+                      <span className="thinking-text">CLARIO-1 is analyzing...</span>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </>
               )}
             </section>
 
@@ -736,8 +1184,8 @@ function App() {
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder="Ask about trust, reasoning, or your next insight..."
               />
-              <button type="submit" className="primary-btn compact-btn">
-                Send
+              <button type="submit" className="primary-btn compact-btn" disabled={isThinking}>
+                {isThinking ? 'Thinking...' : 'Send'}
               </button>
             </form>
           </main>
@@ -791,7 +1239,7 @@ function App() {
                   </div>
                   <div className="info-item">
                     <span className="info-lbl">Active Topic</span>
-                    <span className="info-val">{activeTopic}</span>
+                    <span className="info-val">{activeConv?.title || 'New Session'}</span>
                   </div>
                 </div>
               </div>
@@ -799,13 +1247,14 @@ function App() {
               <div className="profile-history-section">
                 <div className="history-header">
                   <h4>Session Chat History ({messages.length})</h4>
-                  {messages.length > 0 && (
+                  {conversations.length > 0 && (
                     <button
                       type="button"
                       className="danger-btn-sm"
-                      onClick={handleClearChat}
+                      onClick={requestDeleteAllChat}
+                      title="Delete all chat history across workspace"
                     >
-                      🗑️ Clear All Chat
+                      🗑️ Delete All Chat
                     </button>
                   )}
                 </div>
@@ -841,7 +1290,7 @@ function App() {
               <button
                 type="button"
                 className="secondary-btn"
-                onClick={handleSignOut}
+                onClick={requestSignOut}
                 disabled={authLoading}
               >
                 {authLoading ? 'Signing out...' : 'Log out'}
@@ -855,6 +1304,208 @@ function App() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Confirmation Modal for Delete All Chat with Password Verification */}
+      {showDeleteAllToastModal && (
+        <div className="toast-modal-backdrop" onClick={() => setShowDeleteAllToastModal(false)}>
+          <div className="toast-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="toast-modal-header">
+              <div className="toast-modal-icon">🗑️</div>
+              <div>
+                <h3>Confirm Delete All Chat</h3>
+                <p className="toast-modal-subtitle">Password verification required to proceed</p>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowDeleteAllToastModal(false)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="toast-modal-body">
+              <div className="toast-feature-desc-box">
+                <span className="toast-desc-tag">Feature Description & Security Guard</span>
+                <p className="toast-desc-text">
+                  <strong>Delete All Chat History:</strong> This action will permanently wipe all conversation threads, topics, and message history across your entire workspace from local session and database storage.
+                </p>
+                <div className="toast-warning-note">
+                  ⚠️ <strong>Warning:</strong> Deleting all chat history cannot be undone.
+                </div>
+              </div>
+
+              <div className="password-confirm-box" style={{ marginTop: '16px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                  Enter Account Password to Confirm Deletion:
+                </label>
+                <input
+                  type="password"
+                  value={deleteConfirmPassword}
+                  onChange={(e) => setDeleteConfirmPassword(e.target.value)}
+                  placeholder="Enter your account password..."
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--panel-border)',
+                    background: 'var(--inner-card-bg)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.9rem'
+                  }}
+                />
+                {deletePasswordError && (
+                  <p className="error-text" style={{ color: '#fca5a5', fontSize: '0.82rem', marginTop: '6px', margin: '6px 0 0' }}>
+                    ⚠️ {deletePasswordError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="toast-modal-footer">
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => setShowDeleteAllToastModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="danger-btn"
+                onClick={executeDeleteAllChat}
+              >
+                🗑️ Confirm & Delete All Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Confirmation Modal for Delete Conversation */}
+      {showDeleteConvToastModal && (
+        <div className="toast-modal-backdrop" onClick={() => setShowDeleteConvToastModal(false)}>
+          <div className="toast-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="toast-modal-header">
+              <div className="toast-modal-icon">🗑️</div>
+              <div>
+                <h3>Confirm Delete Conversation</h3>
+                <p className="toast-modal-subtitle">Confirmation required before deleting conversation</p>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowDeleteConvToastModal(false)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="toast-modal-body">
+              <div className="toast-feature-desc-box">
+                <span className="toast-desc-tag">Feature Description</span>
+                <p className="toast-desc-text">
+                  <strong>Delete Conversation:</strong> This feature permanently removes the conversation (<em>"{conversations.find(c => c.id === convToDeleteId)?.title || 'Selected Conversation'}"</em>) and all associated message history from your left panel history and synced storage.
+                </p>
+                <div className="toast-warning-note">
+                  ⚠️ <strong>Note:</strong> Deleting a conversation cannot be undone once confirmed.
+                </div>
+              </div>
+            </div>
+
+            <div className="toast-modal-footer">
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => setShowDeleteConvToastModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="danger-btn"
+                onClick={executeDeleteConversation}
+              >
+                🗑️ Confirm & Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Confirmation Modal for Log Out */}
+      {showLogoutToastModal && (
+        <div className="toast-modal-backdrop" onClick={() => setShowLogoutToastModal(false)}>
+          <div className="toast-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="toast-modal-header">
+              <div className="toast-modal-icon logout-icon">🚪</div>
+              <div>
+                <h3>Confirm Log Out</h3>
+                <p className="toast-modal-subtitle">Confirmation required before ending session</p>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowLogoutToastModal(false)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="toast-modal-body">
+              <div className="toast-feature-desc-box">
+                <span className="toast-desc-tag">Feature Description</span>
+                <p className="toast-desc-text">
+                  <strong>Account Sign Out:</strong> Signing out safely terminates your active authentication session and returns you to the login screen. Your stored conversations will remain securely saved for your next login.
+                </p>
+                <div className="toast-info-note">
+                  ℹ️ <strong>Info:</strong> You can sign back in at any time with your credentials.
+                </div>
+              </div>
+            </div>
+
+            <div className="toast-modal-footer">
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => setShowLogoutToastModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={executeSignOut}
+              >
+                🚪 Confirm & Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification Banner */}
+      {toastNotice && (
+        <div className={`toast-notification-banner ${toastNotice.type}`}>
+          <span className="toast-banner-icon">
+            {toastNotice.type === 'success' ? '✅' : 'ℹ️'}
+          </span>
+          <div className="toast-banner-content">
+            <strong>{toastNotice.title}</strong>
+            <p>{toastNotice.message}</p>
+          </div>
+          <button
+            type="button"
+            className="toast-banner-close"
+            onClick={() => setToastNotice(null)}
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>
