@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const initialTrustMetrics = [
@@ -504,9 +504,32 @@ function App() {
     return () => clearTimeout(timer);
   }, [tourStep, showTour]);
   
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authNotice, setAuthNotice] = useState('');
+
+  // Compute User-Specific Unique Identifier for Isolated Chat Storage
+  const currentUserId = useMemo(() => {
+    if (session?.user?.id) return session.user.id;
+    if (formData?.email && formData.email.trim()) {
+      return 'usr_' + formData.email.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+    }
+    return 'guest';
+  }, [session, formData.email]);
+
+  const storageKey = `clario_conversations_${currentUserId}`;
+
   const [conversations, setConversations] = useState(() => {
     try {
-      const saved = localStorage.getItem('clario_conversations');
+      const initKey = `clario_conversations_${currentUserId}`;
+      const saved = localStorage.getItem(initKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -543,18 +566,40 @@ function App() {
     largeText: false
   });
 
-  const [session, setSession] = useState(null);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [authNotice, setAuthNotice] = useState('');
-
+  // Switch and load isolated chat history whenever authorized user changes
   useEffect(() => {
     try {
-      localStorage.setItem('clario_conversations', JSON.stringify(conversations));
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setConversations(parsed);
+          setActiveConvId(parsed[0].id);
+          if (session?.user?.id) fetchChatHistory(session.user.id);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('User storage load error:', e);
+    }
+
+    setConversations(defaultConversations);
+    setActiveConvId(defaultConversations[0]?.id || null);
+
+    if (session?.user?.id) {
+      fetchChatHistory(session.user.id);
+    }
+  }, [currentUserId]);
+
+  // Persist conversations strictly into user's isolated storage key
+  useEffect(() => {
+    if (!currentUserId) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(conversations));
     } catch (e) {
       console.warn('LocalStorage save error:', e);
     }
-  }, [conversations]);
+  }, [conversations, storageKey, currentUserId]);
 
   const toggleA11y = (modeKey) => {
     setA11yModes((prev) => ({ ...prev, [modeKey]: !prev[modeKey] }));
@@ -617,21 +662,52 @@ function App() {
   const executeDeleteAllChat = async () => {
     setDeletePasswordError('');
 
-    const expectedPassword = formData.password || 'password';
-    if (!deleteConfirmPassword) {
+    if (!deleteConfirmPassword || !deleteConfirmPassword.trim()) {
       setDeletePasswordError('Password is required to confirm deleting all chat history.');
       return;
     }
 
-    if (deleteConfirmPassword !== expectedPassword && deleteConfirmPassword !== 'password') {
+    const inputPassword = deleteConfirmPassword.trim();
+    const userEmail = session?.user?.email || formData.email;
+
+    let isPasswordValid = false;
+
+    // 1. Validate password against Supabase Auth if authenticated
+    if (isSupabaseConfigured() && userEmail) {
+      try {
+        const { error: authErr } = await supabase.auth.signInWithPassword({
+          email: userEmail,
+          password: inputPassword
+        });
+        if (!authErr) {
+          isPasswordValid = true;
+        }
+      } catch (err) {
+        // Fallback
+      }
+    }
+
+    // 2. Validate against local form password or stored local session password
+    if (!isPasswordValid) {
+      const storedLocalPassword = formData.password || localStorage.getItem(`clario_pwd_${currentUserId}`);
+      if (storedLocalPassword && inputPassword === storedLocalPassword) {
+        isPasswordValid = true;
+      } else if (!storedLocalPassword && inputPassword.length > 0) {
+        // In local demo mode without pre-saved password, accept any typed password
+        isPasswordValid = true;
+      }
+    }
+
+    if (!isPasswordValid) {
       setDeletePasswordError('Incorrect password. Please enter your valid account password.');
       return;
     }
 
+    // Execute complete deletion
     setConversations([]);
     setActiveConvId(null);
     try {
-      localStorage.removeItem('clario_conversations');
+      localStorage.removeItem(storageKey);
     } catch (e) {
       console.warn('LocalStorage remove item error:', e);
     }
@@ -725,11 +801,6 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: ''
-  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -799,12 +870,14 @@ function App() {
         if (error) {
           if (!isSupabaseConfigured() || error.message?.toLowerCase().includes('fetch') || error.message?.toLowerCase().includes('url')) {
             setAuthNotice(`Supabase Auth (Demo Mode): Operating with placeholder API keys. Standard fallback enabled.`);
+            if (formData.password) localStorage.setItem(`clario_pwd_${currentUserId}`, formData.password);
             setView('chatbot');
           } else {
             setAuthError(error.message || 'Login failed. Please check your credentials.');
           }
         } else if (data?.user) {
           setAuthNotice('Successfully signed in via Supabase!');
+          if (formData.password) localStorage.setItem(`clario_pwd_${data.user.id}`, formData.password);
           setView('chatbot');
         }
       } else {
@@ -821,6 +894,7 @@ function App() {
         if (error) {
           if (!isSupabaseConfigured() || error.message?.toLowerCase().includes('fetch') || error.message?.toLowerCase().includes('url')) {
             setAuthNotice(`Supabase Sign Up (Demo Mode): Operating with placeholder API keys. Account created in demo view.`);
+            if (formData.password) localStorage.setItem(`clario_pwd_${currentUserId}`, formData.password);
             setView('chatbot');
           } else {
             setAuthError(error.message || 'Registration failed. Please try again.');
@@ -828,6 +902,7 @@ function App() {
         } else if (data?.user) {
           if (data?.session) {
             setAuthNotice('Account created and signed in successfully via Supabase!');
+            if (formData.password) localStorage.setItem(`clario_pwd_${data.user.id}`, formData.password);
             setView('chatbot');
           } else {
             setAuthNotice('Registration submitted! Please check your email to confirm registration.');
@@ -836,6 +911,7 @@ function App() {
       }
     } catch (err) {
       console.warn('Auth submission exception:', err);
+      if (formData.password) localStorage.setItem(`clario_pwd_${currentUserId}`, formData.password);
       setAuthNotice('Operating with placeholder credentials. Entering workspace.');
       setView('chatbot');
     } finally {
@@ -953,7 +1029,7 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: session?.user?.id || 'demo-user',
+          user_id: currentUserId,
           text: userText,
           topic: targetTitle || 'Trust Analysis',
           user_name: userProfile.name,
